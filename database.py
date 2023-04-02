@@ -55,6 +55,30 @@ def get_random_question(conn):
     return q
 
 
+# score functions
+
+# def add_score(conn, player_name, score, quiz_date):
+#     c = conn.cursor()
+#     c.execute('''INSERT INTO scores
+#                 (player_name, score, quiz_date)
+#                 VALUES (?, ?, ?)''',
+#             (player_name, score, quiz_date))
+#     conn.commit()
+
+
+# def get_scores(conn):
+#     c = conn.cursor()
+#     c.execute('SELECT * FROM scores ORDER BY score DESC')
+#     rows = c.fetchall()
+#     scores = []
+#     for row in rows:
+#         s = {'id': row[0], 'player_name': row[1], 'score': row[2], 'quiz_date': row[3]}
+#         scores.append(s)
+#     return scores
+
+
+
+
 
 
                 
