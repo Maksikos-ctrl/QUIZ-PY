@@ -1,4 +1,6 @@
 import sqlite3
+# import psycopg2
+# from psycopg2.extras import RealDictCursor
 
 def connect():
     conn = sqlite3.connect('questions.db')
@@ -55,27 +57,36 @@ def get_random_question(conn):
     return q
 
 
-# score functions
+# PostgreSQL database functions
 
-# def add_score(conn, player_name, score, quiz_date):
-#     c = conn.cursor()
+# def connect_postgresql():
+#     conn = psycopg2.connect(
+#         host="",
+#         database="your_database",
+#         user="your_username",
+#         password="maksikos973"
+#     )
+#     return conn
+
+# def create_scores_table(cursor):
+#     cursor.execute('''CREATE TABLE IF NOT EXISTS scores
+#                       (id SERIAL PRIMARY KEY,
+#                        name TEXT,
+#                        score INTEGER)''')
+
+# def add_score_postgresql(conn, name, score):
+#     c = conn.cursor(cursor_factory=RealDictCursor)
 #     c.execute('''INSERT INTO scores
-#                 (player_name, score, quiz_date)
-#                 VALUES (?, ?, ?)''',
-#             (player_name, score, quiz_date))
+#                 (name, score)
+#                 VALUES (%s, %s)''',
+#               (name, score))
 #     conn.commit()
 
 
-# def get_scores(conn):
-#     c = conn.cursor()
-#     c.execute('SELECT * FROM scores ORDER BY score DESC')
-#     rows = c.fetchall()
-#     scores = []
-#     for row in rows:
-#         s = {'id': row[0], 'player_name': row[1], 'score': row[2], 'quiz_date': row[3]}
-#         scores.append(s)
-#     return scores
-
+# def get_top_scores_postgresql(conn, limit=10):
+#     c = conn.cursor(cursor_factory=RealDictCursor)
+#     c.execute('SELECT name, score FROM scores ORDER BY score DESC LIMIT %s', (limit,))
+#     return c.fetchall()
 
 
 

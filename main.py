@@ -1,11 +1,13 @@
 import pygame
-import database
+
 import random
 import requests
 import json
 import sys
+import database
 
-from colors import WHITE, GREEN,WHITE, BLACK, RED, BANANA, PINK, DARK_GREEN
+from colors import WHITE, GREEN,WHITE, BLACK, RED, BANANA, PINK, DARK_GREEN, BLUE
+from pygame.locals import *
 
 # Initialize Pygame
 pygame.init()
@@ -16,11 +18,14 @@ pygame.display.set_caption('QUIZ GAME')
 
 # Load the font
 font_answer = pygame.font.Font("assets/main.ttf", 30)
+font_popUp = pygame.font.Font("assets/main.ttf", 20)
 
 font = pygame.font.Font("assets/main.ttf", 80)
 font_question = pygame.font.Font("assets/main.ttf", 23)
-fps_font = pygame.font.Font("assets/main.ttf", 20)
-score_font = pygame.font.Font("assets/main.ttf", 20)
+fps_font = pygame.font.Font("assets/main.ttf", 25)
+score_font = pygame.font.Font("assets/main.ttf", 30)
+account_font = pygame.font.Font("assets/main.ttf", 20)
+popup_font = pygame.font.Font("assets/main.ttf", 25)
 
 background = pygame.image.load('assets/index.png')
 background_game = pygame.image.load('assets/bg.png')
@@ -28,10 +33,59 @@ background_game = pygame.image.load('assets/bg.png')
 # Define the start button
 button_rect = pygame.Rect(250, 250, 300, 100)
 button_text = font.render("START", True, WHITE)
+
+
+
+
+
+popup_width = 800
+popup_height = 600
+popup_surface = pygame.Surface((popup_width, popup_height))
+popup_rect = popup_surface.get_rect(center=screen.get_rect().center)
+popup_bg = pygame.image.load('assets/bg_popup.jpg')
+popup_bg = pygame.transform.scale(popup_bg, (popup_width, popup_height))
+popup_surface.blit(popup_bg, (0, 0))
+
+
+# Create the input fields and the submit button
+nickname_input = pygame.Rect(200, 200, 300, 30)
+password_input = pygame.Rect(200, 250, 300, 30)
+submit_button = pygame.Rect(300, 300, 100, 30)
+
+# Draw the input fields and the submit button on the popup surface
+pygame.draw.rect(popup_surface, (0, 0, 0), nickname_input, 2)
+pygame.draw.rect(popup_surface, (0, 0, 0), password_input, 2)
+pygame.draw.rect(popup_surface, BLUE, submit_button, 2)
+nickname_img = pygame.image.load('assets/acc.png')
+nickname_img = pygame.transform.scale(nickname_img, (nickname_img.get_width() // 16, nickname_img.get_height() // 16))
+popup_surface.blit(nickname_img, (159, 200))
+password_img = pygame.image.load('assets/password.png')
+password_img = pygame.transform.scale(password_img, (password_img.get_width() // 8, password_img.get_height() // 8))
+popup_surface.blit(password_img, (159, 250))
+submit_text = font_popUp.render("Submit", True, BLACK)
+popup_surface.blit(submit_text, (313, 307))
+# Event handling
+input_active = 1
+
+active_input = None
+nickname = ''
+password = ''
+
+#hover colors
 button_hovered_color = BANANA
 button_color = BLACK
+pop_up_button = BLUE
 
-# Load the arrow image
+active_color = 0
+color_active = pygame.Color('lightskyblue3')
+submit_hovered = GREEN
+
+color = color_active
+form_submitted = True  
+
+
+
+
 # Load the arrow image
 arrow = pygame.image.load('assets/arrow1.png')
 arrow = pygame.transform.scale(arrow, (arrow.get_width() // 2, arrow.get_height() // 2))
@@ -40,10 +94,23 @@ arrow = pygame.transform.scale(arrow, (arrow.get_width() // 2, arrow.get_height(
 arrow_rect = arrow.get_rect()
 arrow_rect.bottomright = screen.get_rect().bottomright
 
+# Load the account image
+account = pygame.image.load('assets/acc.png')
+account = pygame.transform.scale(account, (account.get_width() // 8, account.get_height() // 8))
+
+account_rect = account.get_rect()
+account_rect.topright = screen.get_rect().topright
 
 
 
 conn = database.connect()
+# conn_postgresql = database.connect_postgresql()
+# database.create_scores_table(conn_postgresql)
+
+
+
+
+
 
 
 # Fetch questions from the Open Trivia API and add them to the database
@@ -75,11 +142,14 @@ current_question_index = 0
 
 selected_answer = None
 
+
+
+
+# player_name = input('Enter your name: ')
 score = 0
     
 # Create the clock object to track FPS
 clock = pygame.time.Clock()
-
 
 # Main game loop
 while True:
@@ -116,7 +186,7 @@ while True:
 
 
     # Render the current FPS on the screen
-    fps_text = fps_font.render(f"FPS: {fps}", True, GREEN)
+    fps_text = fps_font.render(f"FPS: {fps}", True, BLUE)
     fps_rect = fps_text.get_rect(bottomleft=screen.get_rect().bottomleft)
     screen.blit(fps_text, fps_rect)
 
@@ -126,16 +196,133 @@ while True:
     score_rect = score_text.get_rect(topleft=screen.get_rect().topleft)
     screen.blit(score_text, score_rect)
 
+    screen.blit(account, account_rect)
+
+         
+
+
     # Update the display
     pygame.display.flip()
 
+
+    def draw_popup_images():
+        nickname_img = pygame.image.load('assets/acc.png')
+        nickname_img = pygame.transform.scale(nickname_img, (nickname_img.get_width() // 16, nickname_img.get_height() // 16))
+        popup_surface.blit(nickname_img, (159, 200))
+        password_img = pygame.image.load('assets/password.png')
+        password_img = pygame.transform.scale(password_img, (password_img.get_width() // 8, password_img.get_height() // 8))
+        popup_surface.blit(password_img, (159, 250))
+        submit_text = font_popUp.render("Submit", True, BLACK)
+        popup_surface.blit(submit_text, (313, 307))
+        pygame.draw.rect(popup_surface, BLUE, submit_button, 2)
+        
+
+    def handle_input():
+        global nickname_surf, password_surf, input_active, active_input, nickname, password, form_submitted, submit_text, submit_button, pop_up_button
+        nickname = ''
+        password = ''
+        active_input = None
+        input_active = 1
+        nickname_surf = popup_font.render('', True, BLACK)
+        password_surf = popup_font.render('', True, BLACK)
+
+        
+        
+        
+        while input_active:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    input_active = 0
+                    nickname = ''
+                    password = ''
+                
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    mouse_pos = pygame.mouse.get_pos()
+                    if submit_button.collidepoint(mouse_pos):
+                        pop_up_button = button_hovered_color
+                    else:
+                        pop_up_button = BLUE        
+                    if nickname_input.collidepoint(event.pos):
+                        pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_IBEAM)
+                        active_input = "nickname"
+                    
+                    elif password_input.collidepoint(event.pos):
+                        pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_IBEAM)
+                        active_input = "password"
+                    
+                    else:
+                        pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
+                        active_input = None
+                
+                elif event.type == pygame.KEYDOWN:
+                    if active_input == "nickname":
+                        if event.key == pygame.K_BACKSPACE:
+                            nickname = nickname[:-1]
+                        else:
+                            nickname += event.unicode
+                        nickname_surf = popup_font.render(nickname, True, BLACK)
+
+                    elif active_input == "password":
+                        if event.key == pygame.K_BACKSPACE:
+                            password = password[:-1]
+                        else:
+                            password += event.unicode
+                        password_surf = popup_font.render(password, True, BLACK)
+                    if event.key == pygame.K_RETURN:
+                        active_input = "password"  
+                        
+                
+
+            
+            popup_surface.blit(popup_bg, (0, 0))
+            draw_popup_images()
+
+          
+                     
+            
+            pygame.draw.rect(screen, color, nickname_input)
+            pygame.draw.rect(screen, color, password_input)
+
+            nickname_surface = popup_font.render(nickname, True, WHITE)
+            password_surface = popup_font.render("*" * len(password), True, WHITE)
+            
+            
+            screen.blit(nickname_surface, (nickname_input.x+5, nickname_input.y+5))
+            screen.blit(password_surface, (password_input.x+5, password_input.y+5))
+            
+            
+            nickname_input.w = max(200, nickname_surface.get_width()+10)
+            password_input.w = max(200, password_surface.get_width()+10)
+            
+            
+            
+            pygame.display.flip()
+            clock.tick(60)
+        return nickname, password   
+
+
     # Event handling
     for event in pygame.event.get():
-         
+        
         if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
+            pygame.quit()
             sys.exit()
         elif event.type == pygame.MOUSEBUTTONDOWN:
-            if button_rect.collidepoint(event.pos):
+            mouse_pos = pygame.mouse.get_pos()
+            if account_rect.collidepoint(mouse_pos):
+                screen.blit(popup_surface, popup_rect)
+                
+            
+                pygame.display.flip()
+                print("account clicked")
+                nickname, password = handle_input()
+                
+                
+                
+          
+      
+                     
+            elif button_rect.collidepoint(event.pos):                  
                 # Move to part 2
                 # PART 2
                 screen.blit(background_game, (0, 0))
@@ -174,7 +361,12 @@ while True:
                 arrow_rect = arrow.get_rect()
                 arrow_rect.bottomright = screen.get_rect().bottomright
                 screen.blit(arrow, arrow_rect)
-             
+
+                # Display the player's name
+                # player_text = font_question.render(f"Player: {player_name}", True, WHITE)
+                # screen.blit(player_text, (-30, 10))
+                # pygame.display.update()
+
    
 
                 # Check if an option button is clicked
@@ -200,6 +392,13 @@ while True:
                     # fps_rect = fps_text.get_rect(bottomright=screen.get_rect().bottomright)
                     screen.blit(fps_text, fps_rect)
                     screen.blit(score_text, score_rect)
+
+                       # if score is greater than 150, the player wins the game and the pop up window appears with the message "You won!"
+                    # if score > 150:
+                    #     score = font.render("You won!", True, WHITE)
+                    #     pygame.quit()
+                    #     sys.exit()
+                    
 
                     for event in pygame.event.get():
                         if event.type == pygame.QUIT:
@@ -421,7 +620,7 @@ while True:
 
                     pygame.display.flip()
 
-                # PART 3
+               
                 
                 
                 
@@ -433,6 +632,7 @@ while True:
                 pygame.display.flip()
 
 
+
                 
 
 
@@ -440,8 +640,11 @@ while True:
 
      
         
-# Close the database connection
+# Close the database connection to SQLlite
 conn.close()
+
+# Close the connection to the Postgree database
+# conn_postgresql.close()
 
 # Quit Pygame
 pygame.quit()
