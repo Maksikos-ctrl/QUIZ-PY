@@ -26,6 +26,7 @@ fps_font = pygame.font.Font("assets/main.ttf", 25)
 score_font = pygame.font.Font("assets/main.ttf", 30)
 account_font = pygame.font.Font("assets/main.ttf", 20)
 popup_font = pygame.font.Font("assets/main.ttf", 25)
+ps_font = pygame.font.Font(None, 32)
 
 background = pygame.image.load('assets/index.png')
 background_game = pygame.image.load('assets/bg.png')
@@ -51,11 +52,12 @@ popup_surface.blit(popup_bg, (0, 0))
 nickname_input = pygame.Rect(200, 200, 300, 30)
 password_input = pygame.Rect(200, 250, 300, 30)
 submit_button = pygame.Rect(300, 300, 100, 30)
+pop_up_button = GREEN
 
 # Draw the input fields and the submit button on the popup surface
 pygame.draw.rect(popup_surface, (0, 0, 0), nickname_input, 2)
 pygame.draw.rect(popup_surface, (0, 0, 0), password_input, 2)
-pygame.draw.rect(popup_surface, BLUE, submit_button, 2)
+pygame.draw.rect(popup_surface, pop_up_button, submit_button, border_radius=10)
 nickname_img = pygame.image.load('assets/acc.png')
 nickname_img = pygame.transform.scale(nickname_img, (nickname_img.get_width() // 16, nickname_img.get_height() // 16))
 popup_surface.blit(nickname_img, (159, 200))
@@ -64,6 +66,8 @@ password_img = pygame.transform.scale(password_img, (password_img.get_width() //
 popup_surface.blit(password_img, (159, 250))
 submit_text = font_popUp.render("Submit", True, BLACK)
 popup_surface.blit(submit_text, (313, 307))
+submit_button.center = popup_surface.get_rect().center
+            
 # Event handling
 input_active = 1
 
@@ -74,11 +78,12 @@ password = ''
 #hover colors
 button_hovered_color = BANANA
 button_color = BLACK
-pop_up_button = BLUE
+
 
 active_color = 0
 color_active = pygame.Color('lightskyblue3')
-submit_hovered = GREEN
+submit_hovered = WHITE
+submit_color = GREEN
 
 color = color_active
 form_submitted = True  
@@ -169,6 +174,7 @@ while True:
 
     mouse_pos = pygame.mouse.get_pos()
     
+    
 
 
     if button_rect.collidepoint(mouse_pos):
@@ -203,6 +209,7 @@ while True:
 
     # Update the display
     pygame.display.flip()
+    
 
 
     def draw_popup_images():
@@ -212,13 +219,12 @@ while True:
         password_img = pygame.image.load('assets/password.png')
         password_img = pygame.transform.scale(password_img, (password_img.get_width() // 8, password_img.get_height() // 8))
         popup_surface.blit(password_img, (159, 250))
-        submit_text = font_popUp.render("Submit", True, BLACK)
-        popup_surface.blit(submit_text, (313, 307))
-        pygame.draw.rect(popup_surface, BLUE, submit_button, 2)
+       
+        
         
 
     def handle_input():
-        global nickname_surf, password_surf, input_active, active_input, nickname, password, form_submitted, submit_text, submit_button, pop_up_button
+        global nickname_surf, password_surf, input_active, active_input, nickname, password, form_submitted, submit_text, submit_button, submit_color
         nickname = ''
         password = ''
         active_input = None
@@ -237,11 +243,7 @@ while True:
                     password = ''
                 
                 if event.type == pygame.MOUSEBUTTONDOWN:
-                    mouse_pos = pygame.mouse.get_pos()
-                    if submit_button.collidepoint(mouse_pos):
-                        pop_up_button = button_hovered_color
-                    else:
-                        pop_up_button = BLUE        
+                     
                     if nickname_input.collidepoint(event.pos):
                         pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_IBEAM)
                         active_input = "nickname"
@@ -269,7 +271,10 @@ while True:
                             password += event.unicode
                         password_surf = popup_font.render(password, True, BLACK)
                     if event.key == pygame.K_RETURN:
-                        active_input = "password"  
+                        active_input = "password" 
+
+                
+                     
                         
                 
 
@@ -277,14 +282,18 @@ while True:
             popup_surface.blit(popup_bg, (0, 0))
             draw_popup_images()
 
-          
-                     
             
+                     
+            pygame.draw.rect(popup_surface,  submit_color, submit_button, border_radius=10)
+            submit_text = font_popUp.render("Submit", True, BLACK)
+            popup_surface.blit(submit_text, (313, 307))
+            submit_button.center = (350, 316)
             pygame.draw.rect(screen, color, nickname_input)
             pygame.draw.rect(screen, color, password_input)
+            
 
             nickname_surface = popup_font.render(nickname, True, WHITE)
-            password_surface = popup_font.render("*" * len(password), True, WHITE)
+            password_surface = ps_font.render("*" * len(password), True, WHITE)
             
             
             screen.blit(nickname_surface, (nickname_input.x+5, nickname_input.y+5))
@@ -311,8 +320,7 @@ while True:
             mouse_pos = pygame.mouse.get_pos()
             if account_rect.collidepoint(mouse_pos):
                 screen.blit(popup_surface, popup_rect)
-                
-            
+                       
                 pygame.display.flip()
                 print("account clicked")
                 nickname, password = handle_input()
