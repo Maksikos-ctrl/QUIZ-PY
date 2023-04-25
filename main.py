@@ -5,6 +5,8 @@ import requests
 import json
 import sys
 import database
+import socket
+from client import Client
 
 from colors import WHITE, GREEN,WHITE, BLACK, RED, BANANA, PINK, DARK_GREEN, BLUE
 from pygame.locals import *
@@ -150,6 +152,10 @@ selected_answer = None
 
 
 
+
+
+
+
 # player_name = input('Enter your name: ')
 score = 0
     
@@ -220,10 +226,12 @@ while True:
         password_img = pygame.transform.scale(password_img, (password_img.get_width() // 8, password_img.get_height() // 8))
         popup_surface.blit(password_img, (159, 250))
        
+ 
+      
         
-        
+    client = Client("localhost", 5555, nickname)
 
-    def handle_input():
+    def handle_input(client):
         global nickname_surf, password_surf, input_active, active_input, nickname, password, form_submitted, submit_text, submit_button, submit_color
         nickname = ''
         password = ''
@@ -231,8 +239,10 @@ while True:
         input_active = 1
         nickname_surf = popup_font.render('', True, BLACK)
         password_surf = popup_font.render('', True, BLACK)
-
+        nickname_entered = 0
         
+
+       
         
         
         while input_active:
@@ -251,6 +261,13 @@ while True:
                     elif password_input.collidepoint(event.pos):
                         pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_IBEAM)
                         active_input = "password"
+
+                    elif submit_button.collidepoint(event.pos):
+                        if nickname:
+                            nickname_entered = 1
+                            client.nickname = nickname
+                        input_active = 0
+                      
                     
                     else:
                         pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
@@ -269,10 +286,15 @@ while True:
                             password = password[:-1]
                         else:
                             password += event.unicode
-                        password_surf = popup_font.render(password, True, BLACK)
+                        password_surf = popup_font.render("*" * len(password), True, BLACK)
                     if event.key == pygame.K_RETURN:
                         active_input = "password" 
+                    elif event.key == pygame.K_RETURN and nickname:
+                        input_active = False
+                       
 
+                        
+            
                 
                      
                         
@@ -283,11 +305,13 @@ while True:
             draw_popup_images()
 
             
-                     
+            submit_color = GREEN if nickname else RED       
             pygame.draw.rect(popup_surface,  submit_color, submit_button, border_radius=10)
             submit_text = font_popUp.render("Submit", True, BLACK)
             popup_surface.blit(submit_text, (313, 307))
             submit_button.center = (350, 316)
+            nickname_input = pygame.Rect(200, 200, 300, 30)
+            password_input = pygame.Rect(200, 250, 300, 30)
             pygame.draw.rect(screen, color, nickname_input)
             pygame.draw.rect(screen, color, password_input)
             
@@ -307,7 +331,11 @@ while True:
             
             pygame.display.flip()
             clock.tick(60)
-        return nickname, password   
+
+        if nickname_entered:
+            return nickname   
+        else:
+            return None
 
 
     # Event handling
@@ -323,7 +351,11 @@ while True:
                        
                 pygame.display.flip()
                 print("account clicked")
-                nickname, password = handle_input()
+                nickname = handle_input(client)
+                if nickname:
+                    nickname_entered = 1
+                client = Client("localhost", 5555, nickname)
+                
                 
                 
                 
