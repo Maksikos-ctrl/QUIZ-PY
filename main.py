@@ -5,39 +5,33 @@ import requests
 import json
 import sys
 import database
-import socket
-from client import Client
 
-from colors import WHITE, GREEN,WHITE, BLACK, RED, BANANA, PINK, DARK_GREEN, BLUE
+from client import Client
+from colors import *
+from fonts import *
 from pygame.locals import *
+from moviepy.editor import VideoFileClip
 
 # Initialize Pygame
 pygame.init()
 
+WIDTH = 800
+HEIGHT = 600
+
 # Create the game window
-screen = pygame.display.set_mode((800, 600))
-pygame.display.set_caption('QUIZ GAME')
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption('Trivia Titans')
 
-# Load the font
-font_answer = pygame.font.Font("assets/main.ttf", 30)
-font_popUp = pygame.font.Font("assets/main.ttf", 20)
-
-font = pygame.font.Font("assets/main.ttf", 80)
-font_question = pygame.font.Font("assets/main.ttf", 23)
-fps_font = pygame.font.Font("assets/main.ttf", 25)
-score_font = pygame.font.Font("assets/main.ttf", 30)
-account_font = pygame.font.Font("assets/main.ttf", 20)
-popup_font = pygame.font.Font("assets/main.ttf", 25)
-ps_font = pygame.font.Font(None, 32)
-
-background = pygame.image.load('assets/index.png')
+background = pygame.image.load('assets/index.gif')
+background = pygame.transform.scale(background, (background.get_width() * 1.7, background.get_height() * 1.7))
 background_game = pygame.image.load('assets/bg.png')
+
+icon = pygame.image.load("assets/icon.png")
+
 
 # Define the start button
 button_rect = pygame.Rect(250, 250, 300, 100)
 button_text = font.render("START", True, WHITE)
-
-
 
 
 
@@ -71,7 +65,7 @@ popup_surface.blit(submit_text, (313, 307))
 submit_button.center = popup_surface.get_rect().center
             
 # Event handling
-input_active = 1
+input_active = 0
 
 active_input = None
 nickname = ''
@@ -107,6 +101,11 @@ account = pygame.transform.scale(account, (account.get_width() // 8, account.get
 
 account_rect = account.get_rect()
 account_rect.topright = screen.get_rect().topright
+
+# for displaying my nickname
+nickname_surf = None
+nickname_entered = 0
+popup_closed = 0
 
 
 
@@ -149,11 +148,13 @@ current_question_index = 0
 
 selected_answer = None
 
+client = Client("localhost", 5555, nickname)
+
+    
 
 
 
-
-
+pygame.display.set_icon(icon)
 
 
 # player_name = input('Enter your name: ')
@@ -162,11 +163,13 @@ score = 0
 # Create the clock object to track FPS
 clock = pygame.time.Clock()
 
+FPS = 60
+
 # Main game loop
 while True:
 
     # Track time between frames
-    dt = clock.tick(60)
+    dt = clock.tick(FPS)
 
     # Calculate FPS
     fps = int(clock.get_fps())
@@ -204,7 +207,7 @@ while True:
 
 
     # render the current score on the screen
-    score_text = score_font.render(f"Score: {score}", True, DARK_GREEN)
+    score_text = score_font.render(f"Score: {score}", True, YELLOW)
     score_rect = score_text.get_rect(topleft=screen.get_rect().topleft)
     screen.blit(score_text, score_rect)
 
@@ -215,8 +218,6 @@ while True:
 
     # Update the display
     pygame.display.flip()
-    
-
 
     def draw_popup_images():
         nickname_img = pygame.image.load('assets/acc.png')
@@ -225,136 +226,202 @@ while True:
         password_img = pygame.image.load('assets/password.png')
         password_img = pygame.transform.scale(password_img, (password_img.get_width() // 8, password_img.get_height() // 8))
         popup_surface.blit(password_img, (159, 250))
-       
- 
-      
-        
-    client = Client("localhost", 5555, nickname)
 
+
+    def draw_nickname(nickname):
+        nickname_surf = font.render(nickname, True, (255, 255, 255))
+        nickname_rect = nickname_surf.get_rect()
+        nickname_rect.topright = (WIDTH - 10, 10)
+        screen.blit(nickname_surf, nickname_rect)
+
+
+
+
+    
     def handle_input(client):
-        global nickname_surf, password_surf, input_active, active_input, nickname, password, form_submitted, submit_text, submit_button, submit_color
-        nickname = ''
-        password = ''
-        active_input = None
-        input_active = 1
-        nickname_surf = popup_font.render('', True, BLACK)
-        password_surf = popup_font.render('', True, BLACK)
-        nickname_entered = 0
+        global nickname_surf, password_surf, input_active, active_input, nickname, password, form_submitted, submit_text, submit_button, submit_color, account, nickname_entered, popup_closed
         
+       
+        if not nickname_entered and not popup_closed:
+            nickname = ''
+            password = ''
+            active_input = None
+            input_active = True
+            nickname_surf = popup_font.render('', True, BLACK)
+            password_surf = popup_font.render('', True, BLACK)
+            
 
        
         
         
-        while input_active:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    input_active = 0
-                    nickname = ''
-                    password = ''
-                
-                if event.type == pygame.MOUSEBUTTONDOWN:
-                     
-                    if nickname_input.collidepoint(event.pos):
-                        pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_IBEAM)
-                        active_input = "nickname"
-                    
-                    elif password_input.collidepoint(event.pos):
-                        pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_IBEAM)
-                        active_input = "password"
-
-                    elif submit_button.collidepoint(event.pos):
-                        if nickname:
-                            nickname_entered = 1
-                            client.nickname = nickname
+            while input_active:
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
                         input_active = 0
-                      
+                        nickname = ''
+                        password = ''
+                        popup_closed = 1
+
+                            
                     
-                    else:
-                        pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
-                        active_input = None
-                
-                elif event.type == pygame.KEYDOWN:
-                    if active_input == "nickname":
-                        if event.key == pygame.K_BACKSPACE:
-                            nickname = nickname[:-1]
-                        else:
-                            nickname += event.unicode
-                        nickname_surf = popup_font.render(nickname, True, BLACK)
-
-                    elif active_input == "password":
-                        if event.key == pygame.K_BACKSPACE:
-                            password = password[:-1]
-                        else:
-                            password += event.unicode
-                        password_surf = popup_font.render("*" * len(password), True, BLACK)
-                    if event.key == pygame.K_RETURN:
-                        active_input = "password" 
-                    elif event.key == pygame.K_RETURN and nickname:
-                        input_active = False
-                       
-
+                    if event.type == pygame.MOUSEBUTTONDOWN:
                         
-            
-                
-                     
+                        if nickname_input.collidepoint(event.pos):
+                            pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_IBEAM)
+                            active_input = "nickname"
                         
+                        elif password_input.collidepoint(event.pos):
+                            pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_IBEAM)
+                            active_input = "password"
+
+                        elif submit_button.collidepoint(event.pos):
+                            
+                            if nickname:
+                                nickname_entered = 1
+                                client.nickname = nickname
+                                nickname_surf = account_nickname.render(nickname.upper(), True, BLUE)
+                                account = nickname_surf
+                                
+                                
+                                input_active = 0
+                                popup_closed = 1
+                            else:
+                                print('Please enter a nickname')
+                                nickname_entered = 0
+                                input_active = 1
+                                nickname = ''
+                                password = ''
+                                nickname_surf = popup_font.render('', True, BLACK)
+                                password_surf = popup_font.render('', True, BLACK)
+                                active_input = None
+                                pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
+                                                         
+                        else:
+                            pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
+                            active_input = None
+                    
+                    elif event.type == pygame.KEYDOWN:
+                        if active_input == "nickname":
+                            if event.key == pygame.K_BACKSPACE:
+                                nickname = nickname[:-1]
+                            else:
+                                nickname += event.unicode
+                            nickname_surf = popup_font.render(nickname, True, BLACK)
+
+                        elif active_input == "password":
+                            if event.key == pygame.K_BACKSPACE:
+                                password = password[:-1]
+                            else:
+                                password += event.unicode
+                            password_surf = popup_font.render("*" * len(password), True, BLACK)
+                        if event.key == pygame.K_RETURN:
+                            active_input = "password" 
+                        elif event.key == pygame.K_RETURN and nickname:
+                            input_active = False
+                        
+
+                            
+                
+                    
+                        
+                            
+                    
+
+            
+                popup_surface.blit(popup_bg, (0, 0))
+
+        
+                
+                # submit_color = GREEN if nickname else RED       
+                pygame.draw.rect(popup_surface,  submit_color, submit_button, border_radius=10)
+                submit_text = font_popUp.render("SIGN IN", True, BLACK)
+                popup_surface.blit(submit_text, (313, 307))
+                submit_button.center = (350, 316)
+                nickname_input = pygame.Rect(200, 200, 300, 30)
+                password_input = pygame.Rect(200, 250, 300, 30)
+                pygame.draw.rect(screen, color, nickname_input)
+                pygame.draw.rect(screen, color, password_input)
                 
 
-            
-            popup_surface.blit(popup_bg, (0, 0))
-            draw_popup_images()
+                nickname_surface = popup_font.render(nickname, True, WHITE)
+                password_surface = ps_font.render("*" * len(password), True, WHITE)
+                
+                
+                screen.blit(nickname_surface, (nickname_input.x+5, nickname_input.y+5))
+                screen.blit(password_surface, (password_input.x+5, password_input.y+5))
+                
+                
+                nickname_input.w = max(200, nickname_surface.get_width()+10)
+                password_input.w = max(200, password_surface.get_width()+10)
+                
+                
+                
+                pygame.display.flip()
+                clock.tick(60)
 
+        
+        
+
+            if nickname_entered:
             
-            submit_color = GREEN if nickname else RED       
-            pygame.draw.rect(popup_surface,  submit_color, submit_button, border_radius=10)
-            submit_text = font_popUp.render("Submit", True, BLACK)
-            popup_surface.blit(submit_text, (313, 307))
-            submit_button.center = (350, 316)
-            nickname_input = pygame.Rect(200, 200, 300, 30)
-            password_input = pygame.Rect(200, 250, 300, 30)
-            pygame.draw.rect(screen, color, nickname_input)
-            pygame.draw.rect(screen, color, password_input)
+                return nickname   
+            
+            else:
+                return None
             
 
-            nickname_surface = popup_font.render(nickname, True, WHITE)
-            password_surface = ps_font.render("*" * len(password), True, WHITE)
-            
-            
-            screen.blit(nickname_surface, (nickname_input.x+5, nickname_input.y+5))
-            screen.blit(password_surface, (password_input.x+5, password_input.y+5))
-            
-            
-            nickname_input.w = max(200, nickname_surface.get_width()+10)
-            password_input.w = max(200, password_surface.get_width()+10)
-            
-            
-            
-            pygame.display.flip()
-            clock.tick(60)
+    
+    popup_open = 0   
+       
 
-        if nickname_entered:
-            return nickname   
-        else:
-            return None
+    
+   
 
-
+    
     # Event handling
     for event in pygame.event.get():
         
         if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
+            client.disconnect()
+            
             pygame.quit()
             sys.exit()
+         
+            
+            
+            
         elif event.type == pygame.MOUSEBUTTONDOWN:
             mouse_pos = pygame.mouse.get_pos()
             if account_rect.collidepoint(mouse_pos):
-                screen.blit(popup_surface, popup_rect)
-                       
+                popup_open = 1
+                if not nickname_entered:
+
+                    screen.blit(popup_surface, popup_rect)
+
+                             
                 pygame.display.flip()
-                print("account clicked")
                 nickname = handle_input(client)
                 if nickname:
-                    nickname_entered = 1
-                client = Client("localhost", 5555, nickname)
+                    client.nickname = nickname
+                    client.send_message(nickname)
+                    screen.blit(background_game, (0, 0))
+                    screen.blit(account, account_rect)
+                    draw_nickname(nickname)
+                    pygame.display.flip()
+                else:
+                    screen.blit(background, (0, 0))
+                    screen.blit(account, account_rect)
+                    pygame.display.flip()
+
+                popup_open = 0    
+                    
+                
+                
+                
+                    
+                    
+                            
+    
                 
                 
                 
@@ -520,14 +587,14 @@ while True:
                             screen.blit(message, (100, 400))
                             print("Spravna odpoved")
                             score += 10
-                            score_text = score_font.render("Score:" + str(score), True, DARK_GREEN)
+                            score_text = score_font.render("Score:" + str(score), True, YELLOW)
                             pygame.display.flip()
                             
                         else:
                             message = font_answer.render("Nespravna odpoved!", True, RED)
                             screen.blit(message, (100, 400))
                             print("Nespravna odpoved")
-                            score_text = score_font.render("Score:" + str(score), True, DARK_GREEN)
+                            score_text = score_font.render("Score:" + str(score), True, YELLOW)
                             pygame.display.flip()
                             
                       
@@ -633,7 +700,7 @@ while True:
                                         screen.blit(message, (100, 400))
                                         print("Spravna odpoved")
                                         score += 10
-                                        score_text = score_font.render("Score:" + str(score), True, DARK_GREEN)
+                                        score_text = score_font.render("Score:" + str(score), True, YELLOW)
                                         pygame.display.flip()
                                         
                                         
@@ -642,7 +709,7 @@ while True:
                                         screen.fill(BLACK, (100, 400, message.get_width(), message.get_height()))
                                         screen.blit(message, (100, 400))
                                         print("Nespravna odpoved")
-                                        score_text = score_font.render("Score:" + str(score), True, DARK_GREEN)
+                                        score_text = score_font.render("Score:" + str(score), True, YELLOW)
                                         pygame.display.flip()        
                             
                                 elif event.type == pygame.KEYDOWN:

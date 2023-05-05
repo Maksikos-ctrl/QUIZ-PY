@@ -5,7 +5,7 @@ import threading
 class Server:
     def __init__(self):
         self.HOST = "localhost"
-        self.PORT = 55555
+        self.PORT = 5555
         self.MAX_BUFFER = 1024
         self.ENC = "utf8"
         self.ADDR = (self.HOST, self.PORT)
@@ -22,7 +22,7 @@ class Server:
         while 1:
             try:
                 message = client.recv(self.MAX_BUFFER)
-                self.broadcast(message)
+                self.broadcast(message.decode(self.ENC))
             except:
                 index = self.clients.index(client)
                 self.clients.remove(client)
@@ -45,19 +45,20 @@ class Server:
 
                 print(f"Nickname of the client is {nickname}!")
                 self.broadcast(f"{nickname} joined the chat!".encode(self.ENC))
-                client.send("Connected to the server!".encode(self.ENC))
+             
 
                 thread = threading.Thread(target=self.handle, args=(client,))
                 thread.start()
             except:
-                print("An error occured!")
+                print("Server error occured!")
                 self.server.close()
                 break
 
     def run(self):
         self.server.listen()
         print("Server is listening...")
-        self.receive()
+        receive_thread = threading.Thread(target=self.receive)
+        receive_thread.start()
 
 if __name__ == "__main__":
     server = Server()
