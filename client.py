@@ -1,8 +1,7 @@
 import socket
 import threading
-import pygame
 from pygame.locals import *
-import json
+import sys
 from fonts import *
 from colors import *
 
@@ -32,6 +31,14 @@ class Client:
                 print("An error occured!")
                 self.client.close()
                 break
+
+
+    def connect(self):
+        try:
+            self.client.connect((self.HOST, self.PORT))
+        except ConnectionRefusedError:
+            print("The server is not currently running. Please try again later.")
+            sys.exit()        
 
     def write(self):
         while True:

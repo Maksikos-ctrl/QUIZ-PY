@@ -5,6 +5,7 @@ import requests
 import json
 import sys
 import database
+from questions import get_questions_from_api
 
 from client import Client
 from colors import *
@@ -85,6 +86,25 @@ color = color_active
 form_submitted = True  
 
 
+#finish button
+finish_rect = pygame.Rect(300, 300, 100, 30)
+finish_text = pygame.image.load("assets/finish.png")
+finish_text = pygame.transform.scale(finish_text, (finish_text.get_width() // 6, finish_text.get_height() // 6))
+finish_rect.topright = screen.get_rect().topright
+
+# Add a variable to track the current player's turn
+current_player = 1
+
+# Add a variable to track if the game has started
+game_started = False
+
+# Add a variable to track if a player has answered the current question
+player_answered = False
+
+# Add a variable to store the current player's score
+player1_score = 0
+player2_score = 0
+
 
 
 # Load the arrow image
@@ -120,23 +140,42 @@ conn = database.connect()
 
 
 # Fetch questions from the Open Trivia API and add them to the database
-def get_questions_from_api(num_questions):
-    url = f'https://opentdb.com/api.php?amount={num_questions}&type=multiple'
-    response = requests.get(url)
-    data = json.loads(response.text)
-    results = data.get('results')
-    if results:
+def get_questions_from_api(amount=50, category=None, difficulty=None, type=None):
+    url = 'https://opentdb.com/api.php'
+    params = {'amount': amount}
+    if category:
+        params['category'] = category
+    if difficulty:
+        params['difficulty'] = difficulty
+    if type:
+        params['type'] = type
+    response = requests.get(url, params=params)
+    if response.status_code == 200:
+        data = response.json()
+        results = data['results']
+        # Clear existing questions from the database
+        database.clear_questions(conn)
         for result in results:
+            question_type = result['type']
             question = result['question']
             correct_answer = result['correct_answer']
-            incorrect_answers = result['incorrect_answers']
-            options = incorrect_answers + [correct_answer]
-            random.shuffle(options)
-            database.add_questions(conn, question, correct_answer, *options)
+
+            if question_type == 'multiple':
+                # Multiple Choice Question
+                options = result['incorrect_answers'] + [correct_answer]
+                database.add_questions(conn, question, correct_answer, *options)
+            elif question_type == 'boolean':
+                # True/False Question
+                options = ['True', 'False']
+                database.add_questions(conn, question, correct_answer, *options)
+            elif question_type == 'text':
+                # Short Answer Question
+                database.add_questions(conn, question, correct_answer)
 
 # Create the questions table in the database if it doesn't exist
 cursor = conn.cursor()
 database.create_questions_table(cursor)
+database.create_scores_table(cursor)
 
 # Add questions to the database if it's empty
 if len(database.get_questions(conn)) == 0:
@@ -157,7 +196,7 @@ client = Client("localhost", 5555, nickname)
 pygame.display.set_icon(icon)
 
 
-# player_name = input('Enter your name: ')
+
 score = 0
     
 # Create the clock object to track FPS
@@ -428,315 +467,358 @@ while True:
                 
           
       
-                     
-            elif button_rect.collidepoint(event.pos):                  
-                # Move to part 2
-                # PART 2
-                screen.blit(background_game, (0, 0))
+        if nickname_entered:
+            if event.type == pygame.MOUSEBUTTONDOWN:
 
-                
-
-                # Get a random question from the database
-                question = database.get_random_question(conn)
-                options = question['options']
-                correct_answer = question['answer']
-
-                # Create option buttons with background color and text
-                option1_rect = pygame.Rect(100, 200, 200, 30)
-                option1_text = font_answer.render(options[0], True, WHITE)
-                option2_rect = pygame.Rect(400, 200, 200, 30)
-                option2_text = font_answer.render(options[1], True, WHITE)
-                option3_rect = pygame.Rect(100, 300, 200, 30)
-                option3_text = font_answer.render(options[2], True, WHITE)
-                option4_rect = pygame.Rect(400, 300, 200, 30)
-                option4_text = font_answer.render(options[3], True, WHITE)
-
-                # Display the question and option buttons
-                question_surface = font_question.render(question['question'], True, PINK)
-                screen.blit(question_surface, (100, 100))
-                
-                screen.blit(option1_text, (option1_rect.x + 10, option1_rect.y + 5))
                
-                screen.blit(option2_text, (option2_rect.x + 10, option2_rect.y + 5))
-              
-                screen.blit(option3_text, (option3_rect.x + 10, option3_rect.y + 5))
-                
-                screen.blit(option4_text, (option4_rect.x + 10, option4_rect.y + 5))
+                if button_rect.collidepoint(event.pos):                  
+                    # Move to part 2
+                    # PART 2
+                    screen.blit(background_game, (0, 0))
+
+                    
+
+                    # Get a random question from the database
+                    question = database.get_random_question(conn)
+                    options = question['options']
+                    correct_answer = question['answer']
+
+                    # Create option buttons with background color and text
+                    option1_rect = pygame.Rect(100, 200, 200, 30)
+                    option1_text = font_answer.render(options[0], True, WHITE)
+                    option2_rect = pygame.Rect(400, 200, 200, 30)
+                    option2_text = font_answer.render(options[1], True, WHITE)
+
+                    # Display the question and option buttons
+                    question_surface = font_question.render(question['question'], True, PINK)
+                    screen.blit(question_surface, (100, 100))
+
+                    if question['type'] == 'multiple':
+                        option3_rect = pygame.Rect(100, 300, 200, 30)
+                        option3_text = font_answer.render(options[2], True, WHITE)
+                        option4_rect = pygame.Rect(400, 300, 200, 30)
+                        option4_text = font_answer.render(options[3], True, WHITE)
+
+                        screen.blit(option1_text, (option1_rect.x + 10, option1_rect.y + 5))
+                        screen.blit(option2_text, (option2_rect.x + 10, option2_rect.y + 5))
+                        screen.blit(option3_text, (option3_rect.x + 10, option3_rect.y + 5))
+                        screen.blit(option4_text, (option4_rect.x + 10, option4_rect.y + 5))
+                    elif question['type'] == 'boolean':
+                        screen.blit(option1_text, (option1_rect.x + 10, option1_rect.y + 5))
+                        screen.blit(option2_text, (option2_rect.x + 10, option2_rect.y + 5))   
 
 
-                # Draw the arrow image
-                arrow_rect = arrow.get_rect()
-                arrow_rect.bottomright = screen.get_rect().bottomright
-                screen.blit(arrow, arrow_rect)
+                    # Draw the arrow image
+                    arrow_rect = arrow.get_rect()
+                    arrow_rect.bottomright = screen.get_rect().bottomright
+                    screen.blit(arrow, arrow_rect)
 
-                # Display the player's name
-                # player_text = font_question.render(f"Player: {player_name}", True, WHITE)
-                # screen.blit(player_text, (-30, 10))
-                # pygame.display.update()
-
-   
-
-                # Check if an option button is clicked
-                selected_answer = None
-             
-                while True:
-
-                    # Track time between frames
-                    dt = clock.tick(60)
-
-                    # Calculate FPS
-                    fps = int(clock.get_fps())
+                    # draw the finish button
+                    finish_rect = arrow.get_rect()
+                    finish_rect.topright = screen.get_rect().topright
+                    screen.blit(finish_text, finish_rect)
+                    
 
 
                    
 
-                    
     
 
+                    # Check if an option button is clicked
+                    selected_answer = None
+             
+                    while True:
 
-                    # Render the current FPS on the screen
-                    # fps_text = fps_font.render(f"FPS: {fps}", True, GREEN)
-                    # fps_rect = fps_text.get_rect(bottomright=screen.get_rect().bottomright)
-                    screen.blit(fps_text, fps_rect)
-                    screen.blit(score_text, score_rect)
+                        # Track time between frames
+                        dt = clock.tick(60)
 
-                       # if score is greater than 150, the player wins the game and the pop up window appears with the message "You won!"
-                    # if score > 150:
-                    #     score = font.render("You won!", True, WHITE)
-                    #     pygame.quit()
-                    #     sys.exit()
-                    
-
-                    for event in pygame.event.get():
-                        if event.type == pygame.QUIT:
-                            pygame.quit()
-                            sys.exit()
-                        elif event.type == pygame.MOUSEBUTTONDOWN:
-                            if arrow_rect.collidepoint(event.pos):
-
-                                dt = clock.tick(60)
-
-                                # Calculate FPS
-                                fps = int(clock.get_fps())
-
-                                print("Clicked on arrow")
-
-                                screen.blit(background_game, (0, 0))
-                                # when i have clicked on arrow, next question has to appear on the screen and old clears out
-                                current_question_index += 1
-                                
-
-                                # Get a random question from the database
-                                question = database.get_random_question(conn)
-                                options = question['options']
-                                correct_answer = question['answer']
-
-                                # Create option buttons with background color and text
-                                option1_rect = pygame.Rect(100, 200, 200, 30)
-                                option1_text = font_answer.render(options[0], True, WHITE)
-                                option2_rect = pygame.Rect(400, 200, 200, 30)
-                                option2_text = font_answer.render(options[1], True, WHITE)
-                                option3_rect = pygame.Rect(100, 300, 200, 30)
-                                option3_text = font_answer.render(options[2], True, WHITE)
-                                option4_rect = pygame.Rect(400, 300, 200, 30)
-                                option4_text = font_answer.render(options[3], True, WHITE)
-
-                                # Display the question and option buttons
-                                question_surface = font_question.render(question['question'], True, PINK)
-                                screen.blit(question_surface, (100, 100))
-                                
-                                screen.blit(option1_text, (option1_rect.x + 10, option1_rect.y + 5))
-                            
-                                screen.blit(option2_text, (option2_rect.x + 10, option2_rect.y + 5))
-                            
-                                screen.blit(option3_text, (option3_rect.x + 10, option3_rect.y + 5))
-                                
-                                screen.blit(option4_text, (option4_rect.x + 10, option4_rect.y + 5))
-
-
-                                # Draw the arrow image
-                                arrow_rect = arrow.get_rect()
-                                arrow_rect.bottomright = screen.get_rect().bottomright
-                                screen.blit(arrow, arrow_rect)
-                            
-
-
-
-
-
-                            elif option1_rect.collidepoint(event.pos):
-                                selected_answer = options[0]
-                                
-                            elif option2_rect.collidepoint(event.pos):
-                                selected_answer = options[1]
-                                
-                            elif option3_rect.collidepoint(event.pos):
-                                selected_answer = options[2]
-                                
-                            elif option4_rect.collidepoint(event.pos):
-                                selected_answer = options[3]
-                                
+                        # Calculate FPS
+                        fps = int(clock.get_fps())
 
 
                     
-                    # Check if an option button was clicked
-                    if selected_answer:
-                        # Check if the answer is correct
-                        if selected_answer == correct_answer:
-                            message = font_answer.render("Spravna odpoved!", True, GREEN)
-                            screen.blit(message, (100, 400))
-                            print("Spravna odpoved")
-                            score += 10
-                            score_text = score_font.render("Score:" + str(score), True, YELLOW)
-                            pygame.display.flip()
-                            
-                        else:
-                            message = font_answer.render("Nespravna odpoved!", True, RED)
-                            screen.blit(message, (100, 400))
-                            print("Nespravna odpoved")
-                            score_text = score_font.render("Score:" + str(score), True, YELLOW)
-                            pygame.display.flip()
-                            
-                      
 
-                         
+                        
+        
 
-                        # Wait for a keypress to continue
-                        waiting = True
-                        answered = False
-                        while waiting:
-                            
-                            for event in pygame.event.get():
-                                if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
+
+                        
+                        screen.blit(fps_text, fps_rect)
+                        screen.blit(score_text, score_rect)
+
+                        # if score is greater than 150, the player wins the game and the pop up window appears with the message "You won!"
+                        # if score > 150:
+                        #     score = font.render("You won!", True, WHITE)
+                        #     pygame.quit()
+                        #     sys.exit()
+                        
+
+                        for event in pygame.event.get():
+                            if event.type == pygame.QUIT:
+                                client.disconnect()
+                                pygame.quit()
+                                sys.exit()
+                            elif event.type == pygame.MOUSEBUTTONDOWN:
+                                if finish_rect.collidepoint(event.pos):
+                                    nickname = client.nickname
+                                    database.add_score(conn, nickname, score)   
+                                    database.update_results(nickname, score) 
+                                    client.disconnect()
+                                    
                                     pygame.quit()
                                     sys.exit()
-                                elif event.type == pygame.MOUSEBUTTONDOWN and arrow_rect.collidepoint(event.pos):
+                                if arrow_rect.collidepoint(event.pos):
 
-                                    
-       
                                     dt = clock.tick(60)
 
                                     # Calculate FPS
                                     fps = int(clock.get_fps())
 
-
-                                    
                                     print("Clicked on arrow")
 
                                     screen.blit(background_game, (0, 0))
-                                  
-
-                                    
-
                                     # when i have clicked on arrow, next question has to appear on the screen and old clears out
                                     current_question_index += 1
-                                    answered = False
-                                    selected_answer = None
                                     
-                        
+
                                     # Get a random question from the database
                                     question = database.get_random_question(conn)
                                     options = question['options']
                                     correct_answer = question['answer']
-                        
+
                                     # Create option buttons with background color and text
                                     option1_rect = pygame.Rect(100, 200, 200, 30)
                                     option1_text = font_answer.render(options[0], True, WHITE)
                                     option2_rect = pygame.Rect(400, 200, 200, 30)
                                     option2_text = font_answer.render(options[1], True, WHITE)
-                                    option3_rect = pygame.Rect(100, 300, 200, 30)
-                                    option3_text = font_answer.render(options[2], True, WHITE)
-                                    option4_rect = pygame.Rect(400, 300, 200, 30)
-                                    option4_text = font_answer.render(options[3], True, WHITE)
-                        
+
                                     # Display the question and option buttons
                                     question_surface = font_question.render(question['question'], True, PINK)
                                     screen.blit(question_surface, (100, 100))
-                                    
-                                    screen.blit(option1_text, (option1_rect.x + 10, option1_rect.y + 5))
-                                
-                                    screen.blit(option2_text, (option2_rect.x + 10, option2_rect.y + 5))
-                                
-                                    screen.blit(option3_text, (option3_rect.x + 10, option3_rect.y + 5))
-                                    
-                                    screen.blit(option4_text, (option4_rect.x + 10, option4_rect.y + 5))
-                            
-                            
+
+                                    if question['type'] == 'multiple':
+                                        option3_rect = pygame.Rect(100, 300, 200, 30)
+                                        option3_text = font_answer.render(options[2], True, WHITE)
+                                        option4_rect = pygame.Rect(400, 300, 200, 30)
+                                        option4_text = font_answer.render(options[3], True, WHITE)
+
+                                        screen.blit(option1_text, (option1_rect.x + 10, option1_rect.y + 5))
+                                        screen.blit(option2_text, (option2_rect.x + 10, option2_rect.y + 5))
+                                        screen.blit(option3_text, (option3_rect.x + 10, option3_rect.y + 5))
+                                        screen.blit(option4_text, (option4_rect.x + 10, option4_rect.y + 5))
+                                    elif question['type'] == 'boolean':
+                                        screen.blit(option1_text, (option1_rect.x + 10, option1_rect.y + 5))
+                                        screen.blit(option2_text, (option2_rect.x + 10, option2_rect.y + 5))   
+
+
                                     # Draw the arrow image
                                     arrow_rect = arrow.get_rect()
                                     arrow_rect.bottomright = screen.get_rect().bottomright
                                     screen.blit(arrow, arrow_rect)
-                                 
-                                    screen.blit(fps_text, fps_rect)
-                                    
-                                    screen.blit(score_text, score_rect)
-                                    
-                                  
 
 
-                                    pygame.display.flip()
-                                    
-                                elif event.type == pygame.MOUSEBUTTONDOWN:
-                                    
-
+                                    finish_rect = arrow.get_rect()
+                                    finish_rect.topright = screen.get_rect().topright
+                                    screen.blit(finish_text, finish_rect)
                                     
                                 
-                                    if option1_rect.collidepoint(event.pos):
-                                        selected_answer = options[0]
+
+
+
+
+
+                                elif option1_rect.collidepoint(event.pos):
+                                    selected_answer = options[0]
+                                    
+                                elif option2_rect.collidepoint(event.pos):
+                                    selected_answer = options[1]
+                                    
+                                elif option3_rect.collidepoint(event.pos):
+                                    selected_answer = options[2]
+                                    
+                                elif option4_rect.collidepoint(event.pos):
+                                    selected_answer = options[3]
+                                    
+
+
+                        
+                        # Check if an option button was clicked
+                        if selected_answer:
+                            # Check if the answer is correct
+                            if selected_answer == correct_answer:
+                                message = font_answer.render("Spravna odpoved!", True, GREEN)
+                                screen.blit(message, (100, 400))
+                                print("Spravna odpoved")
+                                score += 10
+                                score_text = score_font.render("Score:" + str(score), True, YELLOW)
+                                pygame.display.flip()
+                                
+                            else:
+                                message = font_answer.render("Nespravna odpoved!", True, RED)
+                                screen.blit(message, (100, 400))
+                                print("Nespravna odpoved")
+                                score_text = score_font.render("Score:" + str(score), True, YELLOW)
+                                pygame.display.flip()
+                                
+                        
+
+                            
+
+                            # Wait for a keypress to continue
+                            waiting = True
+                            answered = False
+                            while waiting:
+                                
+                                for event in pygame.event.get():
+                                    if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE) or (event.type == pygame.MOUSEBUTTONDOWN and finish_rect.collidepoint(event.pos)):
+                                        client.disconnect()
+                                        pygame.quit()
+                                        sys.exit()
+                                    elif event.type == pygame.MOUSEBUTTONDOWN and arrow_rect.collidepoint(event.pos):
+
                                         
-                                    elif option2_rect.collidepoint(event.pos):
-                                        selected_answer = options[1]
+        
+                                        dt = clock.tick(60)
+
+                                        # Calculate FPS
+                                        fps = int(clock.get_fps())
+
+
                                         
-                                    elif option3_rect.collidepoint(event.pos):
-                                        selected_answer = options[2]
+                                        print("Clicked on arrow")
+
+                                        screen.blit(background_game, (0, 0))
+                                    
+
                                         
-                                    elif option4_rect.collidepoint(event.pos):
-                                        selected_answer = options[3]
+
+                                        # when i have clicked on arrow, next question has to appear on the screen and old clears out
+                                        current_question_index += 1
+                                        answered = False
+                                        selected_answer = None
                                         
+                            
+                                        # Get a random question from the database
+                                        question = database.get_random_question(conn)
+                                        options = question['options']
+                                        correct_answer = question['answer']
+                            
+                                        # Create option buttons with background color and text
+                                        option1_rect = pygame.Rect(100, 200, 200, 30)
+                                        option1_text = font_answer.render(options[0], True, WHITE)
+                                        option2_rect = pygame.Rect(400, 200, 200, 30)
+                                        option2_text = font_answer.render(options[1], True, WHITE)
+                                        option3_rect = pygame.Rect(100, 300, 200, 30)
+                                        option3_text = font_answer.render(options[2], True, WHITE)
+                                        option4_rect = pygame.Rect(400, 300, 200, 30)
+                                        option4_text = font_answer.render(options[3], True, WHITE)
+                            
+                                        # Display the question and option buttons
+                                        question_surface = font_question.render(question['question'], True, PINK)
+                                        screen.blit(question_surface, (100, 100))
                                         
-                                    if selected_answer == correct_answer:
-                                        message = font_answer.render("Spravna odpoved!!!!", True, GREEN)
-                                        screen.fill(BLACK, (100, 400, message.get_width(), message.get_height()))
-                                        screen.blit(message, (100, 400))
-                                        print("Spravna odpoved")
-                                        score += 10
-                                        score_text = score_font.render("Score:" + str(score), True, YELLOW)
+                                        if question['type'] == 'multiple':
+                                            option3_rect = pygame.Rect(100, 300, 200, 30)
+                                            option3_text = font_answer.render(options[2], True, WHITE)
+                                            option4_rect = pygame.Rect(400, 300, 200, 30)
+                                            option4_text = font_answer.render(options[3], True, WHITE)
+
+                                            screen.blit(option1_text, (option1_rect.x + 10, option1_rect.y + 5))
+                                            screen.blit(option2_text, (option2_rect.x + 10, option2_rect.y + 5))
+                                            screen.blit(option3_text, (option3_rect.x + 10, option3_rect.y + 5))
+                                            screen.blit(option4_text, (option4_rect.x + 10, option4_rect.y + 5))
+                                        elif question['type'] == 'boolean':
+                                            screen.blit(option1_text, (option1_rect.x + 10, option1_rect.y + 5))
+                                            screen.blit(option2_text, (option2_rect.x + 10, option2_rect.y + 5))   
+                                
+                                
+                                        # Draw the arrow image
+                                        arrow_rect = arrow.get_rect()
+                                        arrow_rect.bottomright = screen.get_rect().bottomright
+                                        screen.blit(arrow, arrow_rect)
+
+                                        finish_rect = arrow.get_rect()
+                                        finish_rect.topright = screen.get_rect().topright
+                                        screen.blit(finish_text, finish_rect)
+                    
+                                    
+                                        screen.blit(fps_text, fps_rect)
+                                        
+                                        screen.blit(score_text, score_rect)
+                                        
+                                    
+
+
                                         pygame.display.flip()
                                         
+                                    elif event.type == pygame.MOUSEBUTTONDOWN:
                                         
-                                    else:
-                                        message = font_answer.render("Nespravna odpoved!", True, RED)
-                                        screen.fill(BLACK, (100, 400, message.get_width(), message.get_height()))
-                                        screen.blit(message, (100, 400))
-                                        print("Nespravna odpoved")
-                                        score_text = score_font.render("Score:" + str(score), True, YELLOW)
-                                        pygame.display.flip()        
-                            
-                                elif event.type == pygame.KEYDOWN:
-                                    if event.key == pygame.K_SPACE:
-                                        waiting = False
-                                        pygame.display.flip() 
-                                 
-                                        #break
+
+                                        
                                     
-                                #break
-                                   
-                        
-                        # Exit the outer while loop
-                        break
+                                        if option1_rect.collidepoint(event.pos):
+                                            selected_answer = options[0]
+                                            
+                                        elif option2_rect.collidepoint(event.pos):
+                                            selected_answer = options[1]
+                                            
+                                        elif option3_rect.collidepoint(event.pos):
+                                            selected_answer = options[2]
+                                            
+                                        elif option4_rect.collidepoint(event.pos):
+                                            selected_answer = options[3]
+                                            
+                                            
+                                        if selected_answer == correct_answer:
+                                            message = font_answer.render("Spravna odpoved!!!!", True, GREEN)
+                                            screen.fill(BLACK, (100, 400, message.get_width(), message.get_height()))
+                                            screen.blit(message, (100, 400))
+                                            print("Spravna odpoved")
+                                            score += 10
+                                            score_text = score_font.render("Score:" + str(score), True, YELLOW)
+                                            pygame.display.flip()
+                                            
+                                            
+                                        else:
+                                            message = font_answer.render("Nespravna odpoved!", True, RED)
+                                            screen.fill(BLACK, (100, 400, message.get_width(), message.get_height()))
+                                            screen.blit(message, (100, 400))
+                                            print("Nespravna odpoved")
+                                            score_text = score_font.render("Score:" + str(score), True, YELLOW)
+                                            pygame.display.flip()        
+                                
+                                    elif event.type == pygame.KEYDOWN:
+                                        if event.key == pygame.K_SPACE:
+                                            waiting = False
+                                          
+                                            pygame.display.flip() 
+                                    
+                           
+                           
+                   
+                                           
+                                            
+                                    #break
+                            nickname = client.nickname
+                            database.add_score(conn, nickname, score)   
+                            # database.store_results(nickname, score)  
+                            database.update_results(nickname, score)        
+                            
+                            # Exit the outer while loop
+                            break
+
+                        pygame.display.flip()
+
+                
+                    
+                    
+                    
+                    
+                    
+
+                    
 
                     pygame.display.flip()
-
-               
-                
-                
-                
-                
-                
-
-                  
-
-                pygame.display.flip()
 
 
 
