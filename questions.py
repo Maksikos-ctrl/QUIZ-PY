@@ -1,7 +1,7 @@
 import requests
 import random
 
-def get_questions_from_api(amount=50, category=None, difficulty=None, type=None):
+def get_questions_from_api(amount=50, category=None, difficulty=None, type="multiple"):
     url = 'https://opentdb.com/api.php'
     params = {'amount': amount}
     if category:
@@ -30,7 +30,14 @@ def get_questions_from_api(amount=50, category=None, difficulty=None, type=None)
                
                 result['options'] = ['True', 'False']
                 result['correct_index'] = 0 if result['correct_answer'] == 'True' else 1
-          
+            elif result['type'] == 'input':
+                # Input Question
+
+                result['options'] = []
+                result['correct_index'] = 0
+            else:
+                print('Unknown question type')
+               
         return results
     else:
         print('Error fetching questions from API')
