@@ -2,8 +2,6 @@ import socket
 import threading
 from pygame.locals import *
 import sys
-from fonts import *
-from colors import *
 
 
 class Client:
@@ -61,9 +59,29 @@ class Client:
         self.client.send(message.encode(self.ENC))
 
 
+    def get_other_player_score(self):
+        self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.client.connect(self.ADDR)
+        self.client.send("SCORE".encode(self.ENC))
+        return int(self.client.recv(self.MAX_BUFFER).decode(self.ENC))  
+
+
+    def get_other_player_nickname(self):
+        self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.client.connect(self.ADDR)
+        self.client.send("NICKNAME".encode(self.ENC))
+        return self.client.recv(self.MAX_BUFFER).decode(self.ENC) 
+    
+    def get_other_player_finished(self):
+        self.client.send("FINISHED".encode(self.ENC))
+        return self.client.recv(self.MAX_BUFFER).decode(self.ENC) == "True"
+
+
     def disconnect(self):
         self.client.close()
         print(f"Client {self.nickname} disconnected!")
+
+
 
 
 def get_nickname():

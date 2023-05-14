@@ -10,32 +10,53 @@ def insert_additional_questions(conn):
     sql = '''
     INSERT INTO questions (question, type, answer)
     VALUES 
-        ('What does CPU stand for?', 'input', 'Central Processing Unit'),
-        ('What does GPU stand for?', 'input', 'Graphics Processing Unit'),
-        ('What does RAM stand for?', 'input', 'Random Access Memory'),
-        ('What does PSU stand for?', 'input', 'Power Supply Unit'),
-        ('What does HDD stand for?', 'input', 'Hard Disk Drive'),
-        ('What does SSD stand for?', 'input', 'Solid State Drive'),
-        ('What does VRAM stand for?', 'input', 'Video Random Access Memory'),
-        ('What does USB stand for?', 'input', 'Universal Serial Bus'),
-        ('What does HDMI stand for?', 'input', 'High-Definition Multimedia Interface'),
-        ('What does DVI stand for?', 'input', 'Digital Visual Interface'),
-        ('What does VGA stand for?', 'input', 'Video Graphics Array'),
-        ('What does PCI stand for?', 'input', 'Peripheral Component Interconnect'),
-        ('What does PCIe stand for?', 'input', 'Peripheral Component Interconnect Express'),
-        ('What does SATA stand for?', 'input', 'Serial Advanced Technology Attachment'),
-        ('What does ATX stand for?', 'input', 'Advanced Technology eXtended'),
-        ('What does ITX stand for?', 'input', 'Information Technology eXtended'),
-        ('What does BTX stand for?', 'input', 'Balanced Technology eXtended'),
-        ('What does MATX stand for?', 'input', 'Micro Advanced Technology eXtended'),
-        ('What does ATX stand for?', 'input', 'Advanced Technology eXtended'),
-        ('What does ITX stand for?', 'input', 'Information Technology eXtended')
+        ('What is the name of the computer that played Jeopardy?', 'input', 'Watson'),
+        ('What is the name of the first computer?', 'input', 'ENIAC'),
+        ('What is the name of the first computer programmer?', 'input', 'Ada Lovelace'),
+        ('What is the name of the first computer virus?', 'input', 'Creeper'),
+        ('What is the name of the first microprocessor?', 'input', 'Intel 4004'),
+        ('What is the name of the first computer mouse?', 'input', 'Xerox Alto'),
+        ('What is the name of the first computer game?', 'input', 'Spacewar!'),
+        ('What is the name of the first computer bug?', 'input', 'Moth'),
+        ('What is the name of the first computer hard disk?', 'input', 'IBM 350'),
+        ('What is the name of the first computer modem?', 'input', 'Bell 101'),
+        ('What is the name of the first computer network?', 'input', 'ARPANET'),
+        ('What is the name of the first computer programming language?', 'input', 'Fortran'),
+        ('What is the name of the first computer spreadsheet?', 'input', 'VisiCalc'),
+        ('What is the name of the first computer word processor?', 'input', 'WordStar'),
+        ('What is the name of the first computer operating system?', 'input', 'CTSS')
+        
         
     '''
     c = conn.cursor()
     c.executescript(sql)
     conn.commit()
 
+
+# def delete_additional_questions(conn):
+#     sql = '''
+#     DELETE FROM questions
+#     WHERE question IN (
+#         'What is the name of the computer that played Jeopardy?',
+#         'What is the name of the first computer?',
+#         'What is the name of the first computer programmer?',
+#         'What is the name of the first computer virus?',
+#         'What is the name of the first microprocessor?',
+#         'What is the name of the first computer mouse?',
+#         'What is the name of the first computer game?',
+#         'What is the name of the first computer bug?',
+#         'What is the name of the first computer hard disk?',
+#         'What is the name of the first computer modem?',
+#         'What is the name of the first computer network?',
+#         'What is the name of the first computer programming language?',
+#         'What is the name of the first computer spreadsheet?',
+#         'What is the name of the first computer word processor?',
+#         'What is the name of the first computer operating system?'
+#     )
+#     '''
+#     c = conn.cursor()
+#     c.executescript(sql)
+#     conn.commit()
 
         
 
@@ -49,7 +70,7 @@ def create_questions_table(cursor):
                        options TEXT)''')
     conn = cursor.connection
     # insert_additional_questions(conn)
-    # clear_questions(conn)
+    # delete_additional_questions(conn)
    
 
 

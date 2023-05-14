@@ -92,6 +92,20 @@ class Server:
 
 
         # Reset the ready clients list
+        self.ready_clients = []  
+
+
+    def winner(self, client):
+        # Send a "winner" message to all clients
+        self.broadcast(f"{self.nicknames[self.clients.index(client)]} won!".encode(self.ENC))
+        # Reset the ready clients list
+        self.ready_clients = []      
+
+
+    def game_over(self):
+        # Send a "game over" message to all clients
+        self.broadcast("GAME OVER".encode(self.ENC))
+        # Reset the ready clients list
         self.ready_clients = []                
 
 
