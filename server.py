@@ -20,17 +20,26 @@ class Server:
             client.send(message)
 
     def handle(self, client):
-        while True:
-            try:
+        try:
+            while True:
                 message = client.recv(self.MAX_BUFFER)
                 if message:
                     self.broadcast(message.decode(self.ENC))
                 else:
                     self.remove_client(client)
+                    if client in self.clients:  # Check if the client is still in the list
+                        self.winner(client)  # Call winner() when a client is disconnected
                     break
-            except ConnectionResetError:
-                self.remove_client(client)
-                break
+        except ConnectionResetError:
+            self.remove_client(client)
+            if client in self.clients:  # Check if the client is still in the list
+                self.winner(client)  # Call winner() when a client is disconnected
+        except ValueError:
+           # Handle the case when a client that has already been removed is disconnected
+            pass
+
+
+
 
     def remove_client(self, client):
         index = self.clients.index(client)
@@ -75,7 +84,7 @@ class Server:
                         self.start_game()
                         print("Game started!")
                     # if third client wants to join, send a message that the game is full, and close the connection
-                    elif len(self.ready_clients) > 2:
+                    elif len(self.ready_clients) == 3:
                         self.send_message(client, "The game is full. Please try again later.")
                         self.remove_client(client)
                         print("Game is full!")
@@ -102,11 +111,12 @@ class Server:
         self.ready_clients = []      
 
 
-    def game_over(self):
-        # Send a "game over" message to all clients
-        self.broadcast("GAME OVER".encode(self.ENC))
+    def winner(self, client):
+        winner_index = self.clients.index(client)
+        winner_nickname = self.nicknames[winner_index]
+        self.broadcast(f"Winner: {winner_nickname}".encode(self.ENC))
         # Reset the ready clients list
-        self.ready_clients = []                
+        self.ready_clients = []         
 
 
     def run(self):

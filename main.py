@@ -1,5 +1,5 @@
 import pygame
-
+import socket
 import random
 import requests
 import json
@@ -8,11 +8,11 @@ import database
 from questions import get_questions_from_api
 
 from client import Client
-from server import Server
+
 from colors import *
 from fonts import *
 from pygame.locals import *
-from moviepy.editor import VideoFileClip
+
 
 # Initialize Pygame
 pygame.init()
@@ -104,11 +104,6 @@ game_started = False
 # Add a variable to track if a player has answered the current question
 player_answered = False
 
-# Add a variable to store the current player's score
-player1_score = 0
-player2_score = 0
-
-
 
 # Load the arrow image
 arrow = pygame.image.load('assets/arrow1.png')
@@ -163,8 +158,7 @@ wrong_sound = pygame.mixer.Sound('assets/wrong.mp3')
 
 
 conn = database.connect()
-# conn_postgresql = database.connect_postgresql()
-# database.create_scores_table(conn_postgresql)
+
 
          
 # Create the questions table in the database if it doesn't exist
@@ -173,13 +167,13 @@ database.create_questions_table(cursor)
 database.create_scores_table(cursor)
 
 
-# Execute the query to fetch all rows from the questions table
-cursor.execute('SELECT type FROM questions')
+# # Execute the query to fetch all rows from the questions table
+# cursor.execute('SELECT type FROM questions')
 
-# Fetch all the rows and print the values in the type column
-rows = cursor.fetchall()
-for row in rows:
-    print(row[0])
+# # Fetch all the rows and print the values in the type column
+# rows = cursor.fetchall()
+# for row in rows:
+#     print(row[0])
 
 def get_questions_from_api(amount=50, category=None, difficulty=None, type=None):
     url = 'https://opentdb.com/api.php'
@@ -227,10 +221,7 @@ selected_answer = None
 
 client = Client("localhost", 5555, nickname)
 
-
-
-
-    
+ 
 
 
 
@@ -361,6 +352,7 @@ while True:
                                 nickname_entered = 1
                                 client.nickname = nickname
                                 nickname_surf = account_nickname.render(nickname.upper(), True, BLUE)
+                                database.update_results(nickname, score)
                                 account = nickname_surf
                                 
                                 
@@ -487,18 +479,19 @@ while True:
                 screen.blit(title_surface, title_rect)
 
                 rules_text = [
-                    "1. Answer the questions correctly to earn points.",
-                    "2. You can choose from multiple-choice options, boolean or provide an input answer.",
-                    "3. Each correct answer earns you 10 points and you will be notified your answer is correct.",
-                    "4. Incorrect answers won't cost you any points. You will be notified your answer is wrong.",
-                    "5. Use the arrow button to proceed to the next question.",
-                    "6. Click on the 'Finish' button to end the game and save your score.",
+                    "1. To play the game, you need to sign in with a nickname and password.",
+                    "2. Answer the questions correctly to earn points.",
+                    "3. You can choose from multiple-choice options, boolean or provide an input answer.",
+                    "4. Each correct answer earns you 10 points and you will be notified your answer is correct.",
+                    "5. Incorrect answers won't cost you any points. You will be notified your answer is wrong.",
+                    "6. Use the arrow button to proceed to the next question.",
+                    "7. Click on the 'Finish' button to end the game and see your final score.",
                 ]
 
        
                 
                 rules_margin = 20  # Margin between each rule line
-                rules_position = (100, title_rect.bottom + 30)  # Starting position of the rules text
+                rules_position = (90, title_rect.bottom + 30)  # Starting position of the rules text
 
                 for i, rule in enumerate(rules_text):
                     rule_surface = rules_font.render(rule, True, WHITE)
@@ -585,8 +578,8 @@ while True:
                     question_type = question['type']
 
                     # Display the question and option buttons
-                    question_surface = font_question.render(question['question'].replace('&quot;', '"').replace('&#039', '"').replace(";s ", '"'), True, ORANGE)
-                    screen.blit(question_surface, (60, 100))
+                    question_surface = font_question.render(question['question'].replace('&quot;', ' ').replace('&#039', ' ').replace(";s ", '"').replace('&#039;', " "), True, ORANGE)
+                    screen.blit(question_surface, (50, 100))
 
 
                     
@@ -603,27 +596,27 @@ while True:
                         option1_text = font_answer.render(options[0].replace('&quot;', '"') if options else '', True, WHITE)
                         option2_rect = pygame.Rect(400, 200, 200, 30)
                         option2_text = font_answer.render(options[1].replace('&quot;', '"') if len(options) > 1 else '', True, WHITE)
-                        screen.blit(option1_text, (option1_rect.x + 10, option1_rect.y + 5))
-                        screen.blit(option2_text, (option2_rect.x + 10, option2_rect.y + 5))
+                        screen.blit(option1_text, (option1_rect.x, option1_rect.y + 5))
+                        screen.blit(option2_text, (option2_rect.x, option2_rect.y + 5))
 
                         if len(options) > 2 and len(options) != 3:
                             option3_rect = pygame.Rect(100, 300, 200, 30)
                             option3_text = font_answer.render(options[2].replace('&quot;', '"'), True, WHITE)
-                            screen.blit(option3_text, (option3_rect.x + 10, option3_rect.y + 5))
+                            screen.blit(option3_text, (option3_rect.x, option3_rect.y + 5))
 
                         # Clear the third option if len(options) == 3
                         elif len(options) == 3:
                             option3_rect = pygame.Rect(100, 300, 200, 30)
                             option3_text = font_answer.render('', True, WHITE)
-                            screen.blit(option3_text, (option3_rect.x + 10, option3_rect.y + 5))
+                            screen.blit(option3_text, (option3_rect.x, option3_rect.y + 5))
 
                         if len(options) > 3:
                             option4_rect = pygame.Rect(400, 300, 200, 30)
                             option4_text = font_answer.render(options[3].replace('&quot;', '"') if len(options) > 3 else '', True, WHITE)
-                            screen.blit(option4_text, (option4_rect.x + 10, option4_rect.y + 5))
+                            screen.blit(option4_text, (option4_rect.x, option4_rect.y + 5))
 
 
-                        # Clear the fourth and fifth options if len(options) > 5
+                        # Clear the fourth and fifth options if len(options)
                         if len(options) == 5 and len(options) > 5:
                             option5_text = font_answer.render('', True, WHITE)
                             option6_text = font_answer.render('', True, WHITE)
@@ -631,9 +624,9 @@ while True:
                             option5_rect = pygame.Rect(400, 300, 200, 30)
                             option6_rect = pygame.Rect(400, 300, 200, 30)
                             option7_rect = pygame.Rect(400, 300, 200, 30)
-                            screen.blit(option5_text, (option5_rect.x + 10, option5_rect.y + 5))
-                            screen.blit(option6_text, (option6_rect.x + 10, option6_rect.y + 5))
-                            screen.blit(option7_text, (option7_rect.x + 10, option7_rect.y + 5))
+                            screen.blit(option5_text, (option5_rect.x, option5_rect.y + 5))
+                            screen.blit(option6_text, (option6_rect.x, option6_rect.y + 5))
+                            screen.blit(option7_text, (option7_rect.x, option7_rect.y + 5))
 
 
                             
@@ -753,13 +746,6 @@ while True:
                         screen.blit(fps_text, fps_rect)
                         screen.blit(score_text, score_rect)
 
-                        # if score is greater than 150, the player wins the game and the pop up window appears with the message "You won!"
-                        # if score > 150:
-                        #     score = font.render("You won!", True, WHITE)
-                        #     pygame.quit()
-                        #     sys.exit()
-                        
-
                         for event in pygame.event.get():
                             if event.type == pygame.MOUSEBUTTONDOWN:
                                 if event.type == pygame.QUIT:
@@ -770,38 +756,59 @@ while True:
                                 if finish_rect.collidepoint(event.pos):
                                     nickname = client.nickname
                                     database.add_score(conn, nickname, score)
-                                    database.store_results(nickname, score)
                                     database.update_results(nickname, score)
                                     client.disconnect()
-                                    # if 2 clients have clicked on finish button, the game is over
-                                    # if client.get_other_player_finished():
-                                        
-                                    #     pygame.quit()
-                                    #     sys.exit()
-                                    
 
-                                    # Determine the winner by comparing the scores
-                                    # other_player_score = client.get_other_player_score()
-                                    # if score > other_player_score:
-                                    #     winner_nickname = nickname
-                                    #     winner_score = score
-                                    # else:
-                                    #     winner_nickname = client.get_other_player_nickname()
-                                    #     winner_score = other_player_score
+                                    results = []
+                                    with open('results.txt', 'r') as f:
+                                        for line in f:
+                                            if line.strip():
+                                                nickname_score = line.strip().split(', has earned: ')
+                                                if len(nickname_score) == 2:
+                                                    nickname, score = nickname_score
+                                                    nickname = nickname.strip()  # Strip whitespace from the nickname
+                                                    results.append((nickname, int(score)))
 
-                                    
+                                    # Sort the results by score
+                                    results.sort(key=lambda x: x[1], reverse=True)
+
+                                    # Determine the winner and display it
+                                    if len(results) >= 2:
+                                        if results[0][1] > results[1][1]:
+                                            winner_nickname = results[0][0]
+                                        else:
+                                            winner_nickname = results[1][0]
+                                    elif len(results) == 1:
+                                        winner_nickname = results[0][0]
+                                    else:
+                                        winner_nickname = ""
+
+
+                                    # Create a socket connection to the server
+                                    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                                    server_address = ("localhost", 5555)
+                                    server_socket.connect(server_address)
+
+                                    # Send the winner's nickname to the server
+                                    server_socket.send(f"Winner: {winner_nickname}".encode("utf-8"))
+
+                                    # Close the socket connection
+                                    server_socket.close()  
+
                                     winner_bg_image = pygame.image.load("assets/winnerBg.jpg")
                                     winner_bg_image = pygame.transform.scale(winner_bg_image, (winner_bg_image.get_width() * 1.4, winner_bg_image.get_height() * 1.1))
-
-                                    
-                                    font = pygame.font.Font(None, 32)
-                                    nickname_text = font.render(f"Winner: {nickname}", True, (255, 255, 255))
-                                    score_text = font.render(f"Score: {score}", True, (255, 255, 255))
-
-                                    # Blit the image and text onto the screen
                                     screen.blit(winner_bg_image, (0, 0))
-                                    screen.blit(nickname_text, (10, 10))
-                                    screen.blit(score_text, (10, 50))
+
+                                    # Display the results on the screen
+                                    y_position = 10
+                                    for nickname, score in results:
+                                        result_text = font_player.render(f"Nickname: {nickname}, has earned: {score}", True, WHITE)
+                                        screen.blit(result_text, (30, y_position))
+                                        y_position += 40
+
+                                    # Display the winner
+                                    winner_text = font_winner.render(f"The user {winner_nickname} has won", True, YELLOW)
+                                    screen.blit(winner_text, (10, y_position))
 
                                     pygame.display.update()
 
@@ -809,7 +816,6 @@ while True:
                                     pygame.time.delay(5000)
 
                                     pygame.quit()
-                                    sys.exit()
                                 if arrow_rect.collidepoint(event.pos):
 
                                     dt = clock.tick(60)
@@ -835,8 +841,8 @@ while True:
                                     correct_answer = question['answer']
                                     question_type = question['type']
 
-                                    question_surface = font_question.render(question['question'].replace('&quot;', '"').replace('&#039', '"').replace(";s ", '"'), True, ORANGE)
-                                    screen.blit(question_surface, (60, 100))
+                                    question_surface = font_question.render(question['question'].replace('&quot;', ' ').replace('&#039', ' ').replace(";s ", ' ').replace('&#039;', ' '), True, ORANGE)
+                                    screen.blit(question_surface, (50, 100))
 
 
                                 
@@ -853,24 +859,24 @@ while True:
                                         option1_text = font_answer.render(options[0].replace('&quot;', '"') if options else '', True, WHITE)
                                         option2_rect = pygame.Rect(400, 200, 200, 30)
                                         option2_text = font_answer.render(options[1].replace('&quot;', '"') if len(options) > 1 else '', True, WHITE)
-                                        screen.blit(option1_text, (option1_rect.x + 10, option1_rect.y + 5))
-                                        screen.blit(option2_text, (option2_rect.x + 10, option2_rect.y + 5))
+                                        screen.blit(option1_text, (option1_rect.x, option1_rect.y + 5))
+                                        screen.blit(option2_text, (option2_rect.x, option2_rect.y + 5))
 
                                         if len(options) > 2 and len(options) != 3:
                                             option3_rect = pygame.Rect(100, 300, 200, 30)
                                             option3_text = font_answer.render(options[2].replace('&quot;', '"'), True, WHITE)
-                                            screen.blit(option3_text, (option3_rect.x + 10, option3_rect.y + 5))
+                                            screen.blit(option3_text, (option3_rect.x, option3_rect.y + 5))
 
                                         # Clear the third option if len(options) == 3
                                         elif len(options) == 3:
                                             option3_rect = pygame.Rect(100, 300, 200, 30)
                                             option3_text = font_answer.render('', True, WHITE)
-                                            screen.blit(option3_text, (option3_rect.x + 10, option3_rect.y + 5))
+                                            screen.blit(option3_text, (option3_rect.x, option3_rect.y + 5))
 
                                         if len(options) > 3:
                                             option4_rect = pygame.Rect(400, 300, 200, 30)
-                                            option4_text = font_answer.render(options[3].replace('&quot;', '"') if len(options) > 3 else '', True, WHITE)
-                                            screen.blit(option4_text, (option4_rect.x + 10, option4_rect.y + 5))
+                                            option4_text = font_answer.render(options[3].replace('&quot;', '"') if (options) > 3 else '', True, WHITE)
+                                            screen.blit(option4_text, (option4_rect.x, option4_rect.y + 5))
 
 
                                         # Clear the fourth and fifth options if len(options) > 5
@@ -881,9 +887,9 @@ while True:
                                             option5_rect = pygame.Rect(400, 300, 200, 30)
                                             option6_rect = pygame.Rect(400, 300, 200, 30)
                                             option7_rect = pygame.Rect(400, 300, 200, 30)
-                                            screen.blit(option5_text, (option5_rect.x + 10, option5_rect.y + 5))
-                                            screen.blit(option6_text, (option6_rect.x + 10, option6_rect.y + 5))
-                                            screen.blit(option7_text, (option7_rect.x + 10, option7_rect.y + 5))
+                                            screen.blit(option5_text, (option5_rect.x, option5_rect.y + 5))
+                                            screen.blit(option6_text, (option6_rect.x, option6_rect.y + 5))
+                                            screen.blit(option7_text, (option7_rect.x, option7_rect.y + 5))
 
                                     if question_type == 'input':
                                         #  Display the input field
@@ -1037,317 +1043,329 @@ while True:
                             answered = False
 
                             while waiting:
-                                
-                                for event in pygame.event.get():
+                                try: 
+                                    for event in pygame.event.get():
                                                                   
-                                    if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
-                                        client.disconnect()
-                                        pygame.quit()
-                                        sys.exit()
+                                        if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
+                                            client.disconnect()
+                                            pygame.quit()
+                                            sys.exit()
 
-                                    if event.type == pygame.MOUSEBUTTONDOWN and finish_rect.collidepoint(event.pos):
-                                        nickname = client.nickname
-                                        database.add_score(conn, nickname, score)
-                                        database.store_results(nickname, score)
-                                        database.update_results(nickname, score)
-                                        client.disconnect()
+                                        if event.type == pygame.MOUSEBUTTONDOWN and finish_rect.collidepoint(event.pos):
+                                            nickname = client.nickname
+                                            database.add_score(conn, nickname, score)
+                                            database.update_results(nickname, score)
+                                            client.disconnect()
 
-                                        # if client.get_other_player_finished():
-                                            
-                                        #     pygame.quit()
-                                        #     sys.exit()
+                                            results = []
+                                            with open('results.txt', 'r') as f:
+                                                for line in f:
+                                                    if line.strip():
+                                                        nickname_score = line.strip().split(', has earned: ')
+                                                        if len(nickname_score) == 2:
+                                                            nickname, score = nickname_score
+                                                            nickname = nickname.strip()  # Strip whitespace from the nickname
+                                                            results.append((nickname, int(score)))
 
-                                        # Determine the winner by comparing the scores
-                                        # other_player_score = client.get_other_player_score()
-                                        # if score > other_player_score:
-                                        #     winner_nickname = nickname
-                                        #     winner_score = score
-                                        # else:
-                                        #     winner_nickname = client.get_other_player_nickname()
-                                        #     winner_score = other_player_score
+                                            # Sort the results by score
+                                            results.sort(key=lambda x: x[1], reverse=True)
 
-                                        
-                                        winner_bg_image = pygame.image.load("assets/winnerBg.jpg")
-                                        winner_bg_image = pygame.transform.scale(winner_bg_image, (winner_bg_image.get_width() * 1.4, winner_bg_image.get_height() * 1.1))
+                                            # Determine the winner and display it
+                                            if len(results) >= 2:
+                                                if results[0][1] > results[1][1]:
+                                                    winner_nickname = results[0][0]
+                                                else:
+                                                    winner_nickname = results[1][0]
+                                            elif len(results) == 1:
+                                                winner_nickname = results[0][0]
+                                            else:
+                                                winner_nickname = ""
 
-                                        
-                                        font = pygame.font.Font(None, 32)
-                                        nickname_text = font.render(f"Winner: {nickname}", True, (255, 255, 255))
-                                        score_text = font.render(f"Score: {score}", True, (255, 255, 255))
+                                            winner_bg_image = pygame.image.load("assets/winnerBg.jpg")
+                                            winner_bg_image = pygame.transform.scale(winner_bg_image, (winner_bg_image.get_width() * 1.4, winner_bg_image.get_height() * 1.1))
+                                            screen.blit(winner_bg_image, (0, 0))
 
-                                        # Blit the image and text onto the screen
-                                        screen.blit(winner_bg_image, (0, 0))
-                                        screen.blit(nickname_text, (10, 10))
-                                        screen.blit(score_text, (10, 50))
+                                            # Display the results on the screen
+                                            y_position = 10
+                                            for nickname, score in results:
+                                                result_text = font_player.render(f"Nickname: {nickname}, has earned: {score}", True, WHITE)
+                                                screen.blit(result_text, (30, y_position))
+                                                y_position += 40
 
-                                        pygame.display.update()
+                                            # Display the winner
+                                            winner_text = font_winner.render(f"The user {winner_nickname} has won", True, YELLOW)
+                                            screen.blit(winner_text, (10, y_position))
 
-                                        # Wait for a few seconds to display the results
-                                        pygame.time.delay(5000)
+                                            pygame.display.update()
 
-                                        pygame.quit()
-                                        sys.exit()   
+                                            # Wait for a few seconds to display the results
+                                            pygame.time.delay(5000)
 
-                                    if event.type == pygame.MOUSEBUTTONDOWN and arrow_rect.collidepoint(event.pos):
+                                            pygame.quit()
 
-                                        
-        
-                                        dt = clock.tick(60)
-
-                                        # Calculate FPS
-                                        fps = int(clock.get_fps())
-
-
-                                        
-                                        print("Clicked on arrow")
-
-                                        screen.blit(background_game, (0, 0))
-                                    
-
-                                        
-
-                                        # when i have clicked on arrow, next question has to appear on the screen and old clears out
-                                        current_question_index += 1
-                                        answered = False
-                                        selected_answer = None
-                                        
-                            
-                                        # Get a random question from the database
-                                        question = database.get_random_question(conn)
-
-                                        # Display the type of question in console
-                                        print("Type of question is: ", question)    
-
-                                        
-                                        options = question['options']
-                                        correct_answer = question['answer']
-                                        question_type = question['type']
-
-                                        # Display the question and option buttons
-                                        question_surface = font_question.render(question['question'].replace('&quot;', '"').replace('&#039', '"').replace(";s ", '"'), True, ORANGE)
-                                        screen.blit(question_surface, (60, 100))
-
-                                        
-
-                              
-
-
-                                        if question_type == 'multiple':
-                                            option1_rect = pygame.Rect(100, 200, 200, 30)
-                                            option1_text = font_answer.render(options[0].replace('&quot;', '"') if options else '', True, WHITE)
-                                            option2_rect = pygame.Rect(400, 200, 200, 30)
-                                            option2_text = font_answer.render(options[1].replace('&quot;', '"') if len(options) > 1 else '', True, WHITE)
-                                            screen.blit(option1_text, (option1_rect.x + 10, option1_rect.y + 5))
-                                            screen.blit(option2_text, (option2_rect.x + 10, option2_rect.y + 5))
-
-                                            if len(options) > 2 and len(options) != 3:
-                                                option3_rect = pygame.Rect(100, 300, 200, 30)
-                                                option3_text = font_answer.render(options[2].replace('&quot;', '"'), True, WHITE)
-                                                screen.blit(option3_text, (option3_rect.x + 10, option3_rect.y + 5))
-
-                                            # Clear the third option if len(options) == 3
-                                            elif len(options) == 3:
-                                                option3_rect = pygame.Rect(100, 300, 200, 30)
-                                                option3_text = font_answer.render('', True, WHITE)
-                                                screen.blit(option3_text, (option3_rect.x + 10, option3_rect.y + 5))
-
-                                            if len(options) > 3:
-                                                option4_rect = pygame.Rect(400, 300, 200, 30)
-                                                option4_text = font_answer.render(options[3].replace('&quot;', '"') if len(options) > 3 else '', True, WHITE)
-                                                screen.blit(option4_text, (option4_rect.x + 10, option4_rect.y + 5))
-
-
-                                            # Clear the fourth and fifth options if len(options) > 5
-                                            if len(options) == 5 and len(options) > 5:
-                                                option5_text = font_answer.render('', True, WHITE)
-                                                option6_text = font_answer.render('', True, WHITE)
-                                                option7_text = font_answer.render('', True, WHITE)
-                                                option5_rect = pygame.Rect(400, 300, 200, 30)
-                                                option6_rect = pygame.Rect(400, 300, 200, 30)
-                                                option7_rect = pygame.Rect(400, 300, 200, 30)
-                                                screen.blit(option5_text, (option5_rect.x + 10, option5_rect.y + 5))
-                                                screen.blit(option6_text, (option6_rect.x + 10, option6_rect.y + 5))
-                                                screen.blit(option7_text, (option7_rect.x + 10, option7_rect.y + 5))
+                                        if event.type == pygame.MOUSEBUTTONDOWN and arrow_rect.collidepoint(event.pos):
 
                                             
-                                            # Clear the fourth and fifth options if len(options) > 5
-                                            if len(options) == 5 and len(options) > 5:
-                                                option5_text = font_answer.render('', True, WHITE)
-                                                option6_text = font_answer.render('', True, WHITE)
-                                                option7_text = font_answer.render('', True, WHITE)
-                                                option5_rect = pygame.Rect(400, 300, 200, 30)
-                                                option6_rect = pygame.Rect(400, 300, 200, 30)
-                                                option7_rect = pygame.Rect(400, 300, 200, 30)
-                                                screen.blit(option5_text, (option5_rect.x + 10, option5_rect.y + 5))
-                                                screen.blit(option6_text, (option6_rect.x + 10, option6_rect.y + 5))
-                                                screen.blit(option7_text, (option7_rect.x + 10, option7_rect.y + 5))
+            
+                                            dt = clock.tick(60)
+
+                                            # Calculate FPS
+                                            fps = int(clock.get_fps())
+
+
+                                            
+                                            print("Clicked on arrow")
+
+                                            screen.blit(background_game, (0, 0))
+                                        
+
+                                            
+
+                                            # when i have clicked on arrow, next question has to appear on the screen and old clears out
+                                            current_question_index += 1
+                                            answered = False
+                                            selected_answer = None
+                                            
+                                
+                                            # Get a random question from the database
+                                            question = database.get_random_question(conn)
+
+                                            # Display the type of question in console
+                                            print("Type of question is: ", question)    
+
+                                            
+                                            options = question['options']
+                                            correct_answer = question['answer']
+                                            question_type = question['type']
+
+                                            # Display the question and option buttons
+                                            question_surface = font_question.render(question['question'].replace('&quot;', ' ').replace('&#039', ' ').replace(";s ", ' ').replace('&#039;', ' '), True, ORANGE)
+                                            screen.blit(question_surface, (50, 100))
+
+                                            
+
+                                
+
+
+                                            if question_type == 'multiple':
+                                                option1_rect = pygame.Rect(100, 200, 200, 30)
+                                                option1_text = font_answer.render(options[0].replace('&quot;', '"') if options else '', True, WHITE)
+                                                option2_rect = pygame.Rect(400, 200, 200, 30)
+                                                option2_text = font_answer.render(options[1].replace('&quot;', '"') if len(options) > 1 else '', True, WHITE)
+                                                screen.blit(option1_text, (option1_rect.x, option1_rect.y + 5))
+                                                screen.blit(option2_text, (option2_rect.x, option2_rect.y + 5))
+
+                                                if len(options) > 2 and len(options) != 3:
+                                                    option3_rect = pygame.Rect(100, 300, 200, 30)
+                                                    option3_text = font_answer.render(options[2].replace('&quot;', '"'), True, WHITE)
+                                                    screen.blit(option3_text, (option3_rect.x + 5, option3_rect.y + 5))
+
+                                                # Clear the third option if len(options) == 3
+                                                elif len(options) == 3:
+                                                    option3_rect = pygame.Rect(100, 300, 200, 30)
+                                                    option3_text = font_answer.render('', True, WHITE)
+                                                    screen.blit(option3_text, (option3_rect.x, option3_rect.y + 5))
+
+                                                if len(options) > 3:
+                                                    option4_rect = pygame.Rect(400, 300, 200, 30)
+                                                    option4_text = font_answer.render(options[3].replace('&quot;', '"') if len(options) > 3 else '', True, WHITE)
+                                                    screen.blit(option4_text, (option4_rect.x, option4_rect.y + 5))
+
+
+                                                # Clear the fourth and fifth options if len(options) > 5
+                                                if len(options) == 5 and len(options) > 5:
+                                                    option5_text = font_answer.render('', True, WHITE)
+                                                    option6_text = font_answer.render('', True, WHITE)
+                                                    option7_text = font_answer.render('', True, WHITE)
+                                                    option5_rect = pygame.Rect(400, 300, 200, 30)
+                                                    option6_rect = pygame.Rect(400, 300, 200, 30)
+                                                    option7_rect = pygame.Rect(400, 300, 200, 30)
+                                                    screen.blit(option5_text, (option5_rect.x + 5, option5_rect.y + 5))
+                                                    screen.blit(option6_text, (option6_rect.x + 5, option6_rect.y + 5))
+                                                    screen.blit(option7_text, (option7_rect.x + 5, option7_rect.y + 5))
 
                                                 
-                                        if question_type == 'input':
-                                            # Display the input field
-                                        
-                                            input_text = ''
-                                            input_active = True
-                                            active_input = None
-                                            input_surface = popup_font.render('', True, WHITE)
-                                            
-                                        
-                                            
-                                        
-                                            
-                                            while input_active:
-                                                for event in pygame.event.get():
-                                                    if event.type == pygame.QUIT:
-                                                        input_active = False
-                                                        
+                                                # Clear the fourth and fifth options if len(options) > 5
+                                                if len(options) == 5 and len(options) > 5:
+                                                    option5_text = font_answer.render('', True, WHITE)
+                                                    option6_text = font_answer.render('', True, WHITE)
+                                                    option7_text = font_answer.render('', True, WHITE)
+                                                    option5_rect = pygame.Rect(400, 300, 200, 30)
+                                                    option6_rect = pygame.Rect(400, 300, 200, 30)
+                                                    option7_rect = pygame.Rect(400, 300, 200, 30)
+                                                    screen.blit(option5_text, (option5_rect.x, option5_rect.y + 5))
+                                                    screen.blit(option6_text, (option6_rect.x, option6_rect.y + 5))
+                                                    screen.blit(option7_text, (option7_rect.x, option7_rect.y + 5))
 
-                                                    if event.type == pygame.MOUSEBUTTONDOWN:
-                                                        if input_rect.collidepoint(event.pos):
-                                                            pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_IBEAM)
-                                                            active_input = "input"
-
-                                                        elif (enter_button.collidepoint(event.pos) or event.type == pygame.K_RETURN) and input_text:
-                                                            if input_text == correct_answer:
-                                                                correct_sound.play()
-                                                                score += 10
-                                                                input_active = False
-                                                                input_text = ''
-                                                                message = font_answer.render("Spravna odpoved!", True, GREEN)
-                                                        
-                                                                screen.blit(message, (300, 500))
-                                                                
-                                                                pygame.display.flip()
-                                                                break
-
-                                                            else:
-                                                                wrong_sound.play()
-                                                                input_active = False
-                                                                message = font_answer.render("Nespravna odpoved!", True, RED)
-                                                        
-                                                                screen.blit(message, (300, 500))
-                                                                input_text = ''
+                                                    
+                                            if question_type == 'input':
+                                                # Display the input field
+                                            
+                                                input_text = ''
+                                                input_active = True
+                                                active_input = None
+                                                input_surface = popup_font.render('', True, WHITE)
+                                                
+                                            
+                                                
+                                            
+                                                
+                                                while input_active:
+                                                    for event in pygame.event.get():
+                                                        if event.type == pygame.QUIT:
+                                                            input_active = False
                                                             
-                                                                pygame.display.flip()
-                                                                break
 
-                                                    elif event.type == pygame.KEYDOWN:
-                                                        if active_input == "input":
+                                                        if event.type == pygame.MOUSEBUTTONDOWN:
+                                                            if input_rect.collidepoint(event.pos):
+                                                                pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_IBEAM)
+                                                                active_input = "input"
+
+                                                            elif (enter_button.collidepoint(event.pos) or event.type == pygame.K_RETURN) and input_text:
+                                                                if input_text == correct_answer:
+                                                                    correct_sound.play()
+                                                                    score += 10
+                                                                    input_active = False
+                                                                    input_text = ''
+                                                                    message = font_answer.render("Spravna odpoved!", True, GREEN)
+                                                            
+                                                                    screen.blit(message, (300, 500))
+                                                                    
+                                                                    pygame.display.flip()
+                                                                    break
+
+                                                                else:
+                                                                    wrong_sound.play()
+                                                                    input_active = False
+                                                                    message = font_answer.render("Nespravna odpoved!", True, RED)
+                                                            
+                                                                    screen.blit(message, (300, 500))
+                                                                    input_text = ''
+                                                                
+                                                                    pygame.display.flip()
+                                                                    break
+
+                                                        elif event.type == pygame.KEYDOWN:
+                                                            if active_input == "input":
+                                                        
+
+                                                                if event.key == pygame.K_BACKSPACE:
+                                                                    input_text = input_text[:-1]
+                                                                    
+                                                                elif event.unicode.isnumeric() or event.unicode in ['-', '.']:
+                                                                    input_text += event.unicode
+                                                                else:
+                                                                    if len(input_text) < 35:
+                                                                        
+                                                                        input_text += event.unicode    
+                                                                input_surface = input_font.render(input_text, True, WHITE)
+                                                            
+                                                            
+                                                                
+
+                                                    
+                                                    enter_button = pygame.Rect(300, 390, 100, 30)
+                                                    enter_text = font_input.render("Enter", True, WHITE)
+                                                    pygame.draw.rect(screen, input_color, enter_button, border_radius=10)
+                                                    screen.blit(enter_text, (313, 390))
+
+                                            
+                                                    pygame.draw.rect(screen, BLUE, input_rect)
+                                                    input_surface = input_font.render(input_text, True, WHITE)
+                                                    # input_rect.width = max(input_surface.get_width() + 10, 100) 
+                                                    screen.blit(input_surface, (input_rect.x + 5, input_rect.y + 5))
+
+                                                    if input_surface.get_width() > input_rect.width - 10:
+                                                        input_rect.x = WIDTH // 2 - input_rect.width // 2
+                                                    else:
+                                                        input_rect.center = (WIDTH // 2, HEIGHT // 2)
                                                     
 
-                                                            if event.key == pygame.K_BACKSPACE:
-                                                                input_text = input_text[:-1]
-                                                                
-                                                            elif event.unicode.isnumeric() or event.unicode in ['-', '.']:
-                                                                input_text += event.unicode
-                                                            else:
-                                                                if len(input_text) < 35:
-                                                                    
-                                                                    input_text += event.unicode    
-                                                            input_surface = input_font.render(input_text, True, WHITE)
-                                                          
-                                                           
-                                                            
+                                                    pygame.display.flip()
+                                                    clock.tick(60)
 
                                                 
-                                                enter_button = pygame.Rect(300, 390, 100, 30)
-                                                enter_text = font_input.render("Enter", True, WHITE)
-                                                pygame.draw.rect(screen, input_color, enter_button, border_radius=10)
-                                                screen.blit(enter_text, (313, 390))
 
+
+                                    
+                                    
+                                            # Draw the arrow image
+                                            arrow_rect = arrow.get_rect()
+                                            arrow_rect.bottomright = screen.get_rect().bottomright
+                                            screen.blit(arrow, arrow_rect)
+
+                                            finish_rect = arrow.get_rect()
+                                            finish_rect.topright = screen.get_rect().topright
+                                            screen.blit(finish_text, finish_rect)
+                        
                                         
-                                                pygame.draw.rect(screen, BLUE, input_rect)
-                                                input_surface = input_font.render(input_text, True, WHITE)
-                                                # input_rect.width = max(input_surface.get_width() + 10, 100) 
-                                                screen.blit(input_surface, (input_rect.x + 5, input_rect.y + 5))
-
-                                                if input_surface.get_width() > input_rect.width - 10:
-                                                    input_rect.x = WIDTH // 2 - input_rect.width // 2
-                                                else:
-                                                    input_rect.center = (WIDTH // 2, HEIGHT // 2)
-                                                
-
-                                                pygame.display.flip()
-                                                clock.tick(60)
-
+                                            screen.blit(fps_text, fps_rect)
                                             
-
-
-                                
-                                
-                                        # Draw the arrow image
-                                        arrow_rect = arrow.get_rect()
-                                        arrow_rect.bottomright = screen.get_rect().bottomright
-                                        screen.blit(arrow, arrow_rect)
-
-                                        finish_rect = arrow.get_rect()
-                                        finish_rect.topright = screen.get_rect().topright
-                                        screen.blit(finish_text, finish_rect)
-                    
-                                    
-                                        screen.blit(fps_text, fps_rect)
-                                        
-                                        screen.blit(score_text, score_rect)
-                                        
-                                    
-
-
-                                        pygame.display.flip()
-                                        
-                                    elif event.type == pygame.MOUSEBUTTONDOWN:
-                                        
-                                        if question_type == 'multiple':    
-                                        
-                                    
-                                            if option1_rect.collidepoint(event.pos):
-                                                selected_answer = options[0]
-                                                
-                                            elif option2_rect.collidepoint(event.pos):
-                                                selected_answer = options[1]
-                                                
-                                            elif option3_rect.collidepoint(event.pos):
-                                                selected_answer = options[2]
-                                                
-                                            elif option4_rect.collidepoint(event.pos):
-                                                selected_answer = options[3]
-
-                                           
-
-                                                                                
+                                            screen.blit(score_text, score_rect)
                                             
-                                        if selected_answer == correct_answer:
-                                            message = font_answer.render("Spravna odpoved!!!!", True, GREEN)
-                                            screen.fill(BLACK, (300, 500, message.get_width(), message.get_height()))
-                                            screen.blit(message, (300, 500))
-                                            correct_sound.play()
-                                            print("Spravna odpoved")
-                                            score += 10
-                                            score_text = score_font.render("Score:" + str(score), True, YELLOW)
+                                        
+
+
                                             pygame.display.flip()
                                             
+                                        elif event.type == pygame.MOUSEBUTTONDOWN:
                                             
-                                        else:
-                                            message = font_answer.render("Nespravna odpoved!", True, RED)
-                                            screen.fill(BLACK, (300, 500, message.get_width(), message.get_height()))
-                                            screen.blit(message, (300, 500))
-                                            wrong_sound.play()
-                                            print("Nespravna odpoved")
-                                            score_text = score_font.render("Score:" + str(score), True, YELLOW)
-                                            pygame.display.flip()  
+                                            if question_type == 'multiple':    
+                                            
+                                        
+                                                if option1_rect.collidepoint(event.pos):
+                                                    selected_answer = options[0]
+                                                    
+                                                elif option2_rect.collidepoint(event.pos):
+                                                    selected_answer = options[1]
+                                                    
+                                                elif option3_rect.collidepoint(event.pos):
+                                                    selected_answer = options[2]
+                                                    
+                                                elif option4_rect.collidepoint(event.pos):
+                                                    selected_answer = options[3]
 
-                                
-                                
-                                    elif event.type == pygame.KEYDOWN:
-                                        if event.key == pygame.K_SPACE:
-                                            waiting = False
-                                          
-                                            pygame.display.flip() 
+                                            
+
+                                                                                    
+                                                
+                                            try:
+                                                if selected_answer == correct_answer:
+                                                    message = font_answer.render("Spravna odpoved!!!!", True, GREEN)
+                                                    screen.fill(BLACK, (300, 500, message.get_width(), message.get_height()))
+                                                    screen.blit(message, (300, 500))
+                                                    correct_sound.play()
+                                                    print("Spravna odpoved")
+                                                    score += 10
+                                                    score_text = score_font.render("Score:" + str(score), True, YELLOW)
+                                                    pygame.display.flip()
+                                                else:
+                                                    message = font_answer.render("Nespravna odpoved!", True, RED)
+                                                    screen.fill(BLACK, (300, 500, message.get_width(), message.get_height()))
+                                                    screen.blit(message, (300, 500))
+                                                    wrong_sound.play()
+                                                    print("Nespravna odpoved")
+                                                    score_text = score_font.render("Score:" + str(score), True, YELLOW)
+                                                    pygame.display.flip()
+                                            except pygame.error as e:
+                                                pass
+
                                     
-                           
-                           
-                   
+                                    
+                                        elif event.type == pygame.KEYDOWN:
+                                            if event.key == pygame.K_SPACE:
+                                                waiting = False
+                                            
+                                                pygame.display.flip() 
+                                        
+                            
+                            
+                    
                                            
                                             
-                                    #break
+                                except pygame.error as e:
+                                    pass
+                                #break
                             nickname = client.nickname
                             database.add_score(conn, nickname, score)   
                             # database.store_results(nickname, score)  
@@ -1381,8 +1399,6 @@ while True:
 # Close the database connection to SQLlite
 conn.close()
 
-# Close the connection to the Postgree database
-# conn_postgresql.close()
 
 # Quit Pygame
 pygame.quit()
