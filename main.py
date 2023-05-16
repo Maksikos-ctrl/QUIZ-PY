@@ -352,6 +352,7 @@ while True:
                                 nickname_entered = 1
                                 client.nickname = nickname
                                 nickname_surf = account_nickname.render(nickname.upper(), True, BLUE)
+                                database.store_results(nickname, score)
                                 database.update_results(nickname, score)
                                 account = nickname_surf
                                 
@@ -587,6 +588,8 @@ while True:
                     # Display the type of question in console
                     print("Type of question is: ", question_type)
 
+                   
+
                     
 
                  
@@ -755,7 +758,7 @@ while True:
                           
                                 if finish_rect.collidepoint(event.pos):
                                     nickname = client.nickname
-                                    database.add_score(conn, nickname, score)
+                                    database.store_results(nickname, score)
                                     database.update_results(nickname, score)
                                     client.disconnect()
 
@@ -763,10 +766,10 @@ while True:
                                     with open('results.txt', 'r') as f:
                                         for line in f:
                                             if line.strip():
-                                                nickname_score = line.strip().split(', has earned: ')
-                                                if len(nickname_score) == 2:
-                                                    nickname, score = nickname_score
-                                                    nickname = nickname.strip()  # Strip whitespace from the nickname
+                                                last_comma_index = line.rfind(', has earned: ')
+                                                if last_comma_index != -1:
+                                                    nickname = line[:last_comma_index].strip()
+                                                    score = line[last_comma_index + len(', has earned: '):].strip()
                                                     results.append((nickname, int(score)))
 
                                     # Sort the results by score
@@ -783,17 +786,7 @@ while True:
                                     else:
                                         winner_nickname = ""
 
-
-                                    # Create a socket connection to the server
-                                    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                                    server_address = ("localhost", 5555)
-                                    server_socket.connect(server_address)
-
-                                    # Send the winner's nickname to the server
-                                    server_socket.send(f"Winner: {winner_nickname}".encode("utf-8"))
-
-                                    # Close the socket connection
-                                    server_socket.close()  
+                                  
 
                                     winner_bg_image = pygame.image.load("assets/winnerBg.jpg")
                                     winner_bg_image = pygame.transform.scale(winner_bg_image, (winner_bg_image.get_width() * 1.4, winner_bg_image.get_height() * 1.1))
@@ -816,6 +809,8 @@ while True:
                                     pygame.time.delay(5000)
 
                                     pygame.quit()
+
+
                                 if arrow_rect.collidepoint(event.pos):
 
                                     dt = clock.tick(60)
@@ -875,7 +870,7 @@ while True:
 
                                         if len(options) > 3:
                                             option4_rect = pygame.Rect(400, 300, 200, 30)
-                                            option4_text = font_answer.render(options[3].replace('&quot;', '"') if (options) > 3 else '', True, WHITE)
+                                            option4_text = font_answer.render(options[3].replace('&quot;', '"') if len(options) > 3 else '', True, WHITE)
                                             screen.blit(option4_text, (option4_rect.x, option4_rect.y + 5))
 
 
@@ -1053,7 +1048,7 @@ while True:
 
                                         if event.type == pygame.MOUSEBUTTONDOWN and finish_rect.collidepoint(event.pos):
                                             nickname = client.nickname
-                                            database.add_score(conn, nickname, score)
+                                            database.store_results(nickname, score)
                                             database.update_results(nickname, score)
                                             client.disconnect()
 
@@ -1061,10 +1056,10 @@ while True:
                                             with open('results.txt', 'r') as f:
                                                 for line in f:
                                                     if line.strip():
-                                                        nickname_score = line.strip().split(', has earned: ')
-                                                        if len(nickname_score) == 2:
-                                                            nickname, score = nickname_score
-                                                            nickname = nickname.strip()  # Strip whitespace from the nickname
+                                                        last_comma_index = line.rfind(', has earned: ')
+                                                        if last_comma_index != -1:
+                                                            nickname = line[:last_comma_index].strip()
+                                                            score = line[last_comma_index + len(', has earned: '):].strip()
                                                             results.append((nickname, int(score)))
 
                                             # Sort the results by score
@@ -1080,6 +1075,17 @@ while True:
                                                 winner_nickname = results[0][0]
                                             else:
                                                 winner_nickname = ""
+
+                                            # # Create a socket connection to the server
+                                            # server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                                            # server_address = ("localhost", 5555)
+                                            # server_socket.connect(server_address)
+
+                                            # Send the winner's nickname to the server
+                                            # server_socket.send(f"Winner: {winner_nickname}".encode("utf-8"))
+
+                                            # # Close the socket connection
+                                            # server_socket.close()
 
                                             winner_bg_image = pygame.image.load("assets/winnerBg.jpg")
                                             winner_bg_image = pygame.transform.scale(winner_bg_image, (winner_bg_image.get_width() * 1.4, winner_bg_image.get_height() * 1.1))
@@ -1102,6 +1108,7 @@ while True:
                                             pygame.time.delay(5000)
 
                                             pygame.quit()
+
 
                                         if event.type == pygame.MOUSEBUTTONDOWN and arrow_rect.collidepoint(event.pos):
 
