@@ -1,4 +1,4 @@
-# DOCUMENTATION for Trivia-titans
+# Trivia-titans
 
 ## Introduction
 
@@ -55,9 +55,10 @@ The Trivia-titans game is built with Python 3.x and utilizes the following files
 ## How it looks like
 
 
+![Screenshot 2023-05-16 124852](https://github.com/Maksikos-ctrl/SemestralnaPracaPython/assets/69985852/643f8117-8656-40c3-bd34-732f231bccdc)
 
 
 
 
 ## Conclusion
-That's it! You now have a basic understanding of the Q-A codebase and how to contribute to the project. If you have any questions or need further assistance, please don't hesitate to contact the project owner or open an issue on GitHub.
+That's it! You now have a basic understanding of the Trivia-API codebase and how to contribute to the project.
