@@ -14,7 +14,7 @@ To use the program, you'll need to have Python 3.x installed on your system. You
 
 ```bash
 git clone https://github.com/Maksikos-ctrl/SemestralnaPracaPython.git
-
+```
 2. Install the required packages using the command:
 
 ```bash
